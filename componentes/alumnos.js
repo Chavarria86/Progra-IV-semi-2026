@@ -1,123 +1,83 @@
 const alumnos = {
-    props:['forms'],
-    data(){
-        return{
-            alumno:{
-                idAlumno:0,
-                codigo:"",
-                nombre:"",
-                direccion:"",
-                email:"",
-                telefono:""
+    props: ['forms'],
+    data() {
+        return {
+            alumno: {
+                idAlumno: 0, codigo: '', nombre: '', direccion: '', municipio: '', 
+                departamento: '', email: '', telefono: '', fechaNac: '', sexo: 'Masculino'
             },
-            accion:'nuevo',
-            idAlumno:0,
-            data_alumnos:[]
+            accion: 'nuevo',
+            idAlumno: 0 
         }
     },
-    methods:{
-        buscarAlumno(){
+    methods: {
+        buscarAlumno() {
             this.forms.busqueda_alumnos.mostrar = !this.forms.busqueda_alumnos.mostrar;
-            this.$emit('buscar');
+            this.$emit('buscar'); 
         },
-        modificarAlumno(alumno){
+        modificarAlumno(alumno) {
             this.accion = 'modificar';
             this.idAlumno = alumno.idAlumno;
-            this.alumno.codigo = alumno.codigo;
-            this.alumno.nombre = alumno.nombre;
-            this.alumno.direccion = alumno.direccion;
-            this.alumno.email = alumno.email;
-            this.alumno.telefono = alumno.telefono;
+            this.alumno = { ...alumno }; 
         },
         async guardarAlumno() {
-            let datos = {
-                idAlumno: this.accion=='modificar' ? this.idAlumno : this.getId(),
-                codigo: this.alumno.codigo,
-                nombre: this.alumno.nombre,
-                direccion: this.alumno.direccion,
-                email: this.alumno.email,
-                telefono: this.alumno.telefono
-            };
-            this.buscar = datos.codigo;
-            //await this.obtenerAlumnos();
+            let datos = { ...this.alumno };
+            // GENERAMOS ID MANUALMENTE
+            datos.idAlumno = this.accion == 'modificar' ? this.idAlumno : new Date().getTime();
 
-            if(this.data_alumnos.length > 0 && this.accion=='nuevo'){
-                alert("El codigo del alumno ya existe, "+ this.data_alumnos[0].nombre);
-                return; //Termina la ejecucion de la funcion
+            try {
+                if (this.accion === 'nuevo') {
+                    // Validación simple
+                    let n = await db.alumnos.where("codigo").equals(datos.codigo).count();
+                    if (n > 0) { return alert("El código ya existe: " + datos.codigo); }
+                    
+                    await db.alumnos.put(datos);
+                    alert("Alumno registrado.");
+                } else {
+                    await db.alumnos.put(datos);
+                    alert("Alumno actualizado.");
+                }
+                this.limpiarFormulario();
+                this.buscarAlumno(); 
+            } catch (error) {
+                console.error(error);
+                alert("Error: " + error);
             }
-            db.alumnos.put(datos);
-            this.limpiarFormulario();
-            //this.obtenerAlumnos();
         },
-        getId(){
-            return new Date().getTime();
-        },
-        limpiarFormulario(){
+        limpiarFormulario() {
             this.accion = 'nuevo';
             this.idAlumno = 0;
-            this.alumno.codigo = '';
-            this.alumno.nombre = '';
-            this.alumno.direccion = '';
-            this.alumno.email = '';
-            this.alumno.telefono = '';
-        },
+            this.alumno = {
+                idAlumno: 0, codigo: '', nombre: '', direccion: '', municipio: '', 
+                departamento: '', email: '', telefono: '', fechaNac: '', sexo: 'Masculino'
+            };
+        }
     },
     template: `
-        <div class="row">
-            <div class="col-6">
-                <form id="frmAlumnos" @submit.prevent="guardarAlumno" @reset.prevent="limpiarFormulario">
-                    <div class="card text-bg-dark mb-3" style="max-width: 36rem;">
-                        <div class="card-header">REGISTRO DE ALUMNOS</div>
-                        <div class="card-body">
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    CODIGO:
-                                </div>
-                                <div class="col-3">
-                                    <input placeholder="codigo" required v-model="alumno.codigo" type="text" class="form-control">
-                                </div>
-                            </div>
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    NOMBRE:
-                                </div>
-                                <div class="col-6">
-                                    <input placeholder="nombre" required v-model="alumno.nombre" type="text" class="form-control">
-                                </div>
-                            </div>
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    DIRECCION:
-                                </div>
-                                <div class="col-9">
-                                    <input placeholder="direccion" required v-model="alumno.direccion" type="text" class="form-control">
-                                </div>
-                            </div>
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    EMAIL:
-                                </div>
-                                <div class="col-6">
-                                    <input placeholder="email" required v-model="alumno.email" type="text" class="form-control">
-                                </div>
-                            </div>
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    TELEFONO:
-                                </div>
-                                <div class="col-4">
-                                    <input placeholder="telefono" required v-model="alumno.telefono" type="text" class="form-control">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <form @submit.prevent="guardarAlumno" @reset.prevent="limpiarFormulario">
+                    <div class="card card-custom">
+                        <div class="card-header-custom text-center">REGISTRO DE ALUMNO</div>
+                        <div class="card-body p-4">
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label-custom">CÓDIGO:</label><input required v-model="alumno.codigo" type="text" class="form-control" :disabled="accion === 'modificar'"></div>
+                                <div class="col-md-6"><label class="form-label-custom">NOMBRE:</label><input required v-model="alumno.nombre" type="text" class="form-control"></div>
+                                <div class="col-12"><label class="form-label-custom">DIRECCIÓN:</label><input required v-model="alumno.direccion" type="text" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label-custom">MUNICIPIO:</label><input required v-model="alumno.municipio" type="text" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label-custom">DEPTO:</label><input required v-model="alumno.departamento" type="text" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label-custom">EMAIL:</label><input required v-model="alumno.email" type="email" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label-custom">TELÉFONO:</label><input required v-model="alumno.telefono" type="text" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label-custom">FECHA NAC:</label><input required v-model="alumno.fechaNac" type="date" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label-custom">SEXO:</label>
+                                    <select v-model="alumno.sexo" class="form-select"><option>Masculino</option><option>Femenino</option></select>
                                 </div>
                             </div>
                         </div>
-                        <div class="card-footer">
-                            <div class="row">
-                                <div class="col text-center">
-                                    <button type="submit" id="btnGuardarAlumno" class="btn btn-primary">GUARDAR</button>
-                                    <button type="reset" id="btnCancelarAlumno" class="btn btn-warning">NUEVO</button>
-                                    <button type="button" @click="buscarAlumno" id="btnBuscarAlumno" class="btn btn-success">BUSCAR</button>
-                                </div>
-                            </div>
+                        <div class="card-footer text-center bg-white border-0 pb-3">
+                            <button type="submit" class="btn btn-primary btn-custom">GUARDAR</button>
+                            <button type="reset" class="btn btn-warning btn-custom">NUEVO</button>
+                            <button type="button" @click="buscarAlumno" class="btn btn-success btn-custom">BUSCAR</button>
                         </div>
                     </div>
                 </form>
