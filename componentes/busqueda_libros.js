@@ -2,7 +2,7 @@ const busqueda_libros = {
     data() {
         return {
             buscar: '',
-            listaLibros: []
+            libros: []
         }
     },
     methods: {
@@ -10,114 +10,75 @@ const busqueda_libros = {
             this.$emit('modificar', libro);
         },
         async obtenerLibros() {
-            try {
-                let resultados = await db.libros.toArray();
+            this.libros = await db.libros.filter(
+                libro => libro.isbn.toLowerCase().includes(this.buscar.toLowerCase())
+                    || libro.titulo.toLowerCase().includes(this.buscar.toLowerCase())
+                    || libro.editorial.toLowerCase().includes(this.buscar.toLowerCase())
+                    || libro.edicion.toLowerCase().includes(this.buscar.toLowerCase())
+            ).toArray();
 
-                // JOIN manual para obtener los datos del Autor relacionado
-                let listadoCompleto = await Promise.all(resultados.map(async (libro) => {
-                    let autor = await db.autores.get(libro.idAutor);
-                    return {
-                        ...libro,
-                        nombreAutor: autor ? autor.nombre : 'Desconocido',
-                        codigoAutor: autor ? autor.codigo : '---'
-                    };
-                }));
-
-                // Filtro dinámico en memoria
-                if (this.buscar.trim() !== "") {
-                    let texto = this.buscar.toLowerCase();
-                    this.listaLibros = listadoCompleto.filter(item => 
-                        item.titulo.toLowerCase().includes(texto) || 
-                        item.nombreAutor.toLowerCase().includes(texto) ||
-                        item.isbn.toLowerCase().includes(texto) ||
-                        item.genero.toLowerCase().includes(texto)
-                    );
+            // Mapear nombre del autor para visualización
+            for (let i = 0; i < this.libros.length; i++) {
+                let autor = await db.autor.get(this.libros[i].idAutor);
+                if (autor) {
+                    this.libros[i].nombre_autor = autor.nombre;
                 } else {
-                    this.listaLibros = listadoCompleto;
+                    this.libros[i].nombre_autor = 'Desconocido';
                 }
-            } catch (error) {
-                console.error("Error cargando libros: ", error);
             }
         },
-        async eliminarLibro(idLibro, titulo, e) {
-            if(e) e.stopPropagation();
-
-            const result = await Swal.fire({
-                title: '¿Estás seguro?',
-                text: `Vas a eliminar definitivamente el libro "${titulo}".`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar'
+        async eliminarLibro(libro, e) {
+            e.stopPropagation();
+            alertify.confirm('Eliminar Libro', `¿Está seguro de eliminar el libro ${libro.titulo}?`, async e => {
+                await db.libros.delete(libro.idLibro);
+                this.obtenerLibros();
+                alertify.success(`Libro ${libro.titulo} eliminado correctamente`);
+            }, () => {
+                //No hacer nada
             });
-
-            if (result.isConfirmed) {
-                try {
-                    await db.libros.delete(idLibro);
-                    this.obtenerLibros();
-                    
-                    Swal.fire({
-                        title: '¡Eliminado!',
-                        text: 'El libro ha sido borrado del inventario.',
-                        icon: 'success',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                } catch (error) {
-                    console.error(error);
-                    Swal.fire('Error', 'No se pudo eliminar el libro.', 'error');
-                }
-            }
-        }
-    },
-    mounted() {
-        this.obtenerLibros();
+        },
     },
     template: `
-        <div class="row mt-3">
+        <div class="row justify-content-center mt-3">
             <div class="col-12">
-                <div class="card card-custom">
-                    <div class="card-header-custom bg-info text-white d-flex justify-content-between align-items-center">
-                        <span class="fw-bold"><i class="bi bi-book-half me-2"></i> INVENTARIO DE LIBROS</span>
-                        <div class="input-group" style="max-width: 300px;">
-                            <span class="input-group-text bg-white border-0"><i class="bi bi-search text-info"></i></span>
-                            <input type="search" v-model="buscar" @keyup="obtenerLibros" class="form-control border-0 shadow-none" placeholder="Buscar libro, autor o ISBN...">
-                        </div>
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h5 class="mb-0 text-center"><i class="bi bi-search me-2"></i>BÚSQUEDA DE LIBROS</h5>
                     </div>
                     <div class="card-body p-0">
+                        <div class="p-3 bg-light border-bottom">
+                            <input autocomplete="off" type="search" @keyup="obtenerLibros()" v-model="buscar" placeholder="🔍 Buscar libro (ISBN, Título o Editorial)..." class="form-control form-control-lg shadow-sm border-0">
+                        </div>
                         <div class="table-responsive">
-                            <table class="table table-hover table-custom mb-0 text-center align-middle">
-                                <thead>
+                            <table class="table table-hover table-striped mb-0 text-center align-middle" id="tblLibros">
+                                <thead class="table-dark">
                                     <tr>
-                                        <th class="text-start">TÍTULO</th>
-                                        <th>AUTOR (RELACIÓN)</th>
                                         <th>ISBN</th>
-                                        <th>GÉNERO</th>
-                                        <th class="text-center">ACCIONES</th>
+                                        <th>TÍTULO</th>
+                                        <th>AUTOR</th>
+                                        <th>EDITORIAL</th>
+                                        <th>EDICIÓN</th>
+                                        <th>ACCIONES</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="libro in listaLibros" :key="libro.idLibro" @click="modificarLibro(libro)" style="cursor: pointer">
-                                        <td class="fw-bold text-start text-primary">{{ libro.titulo }}</td>
-                                        <td>
-                                            <div class="fw-bold">{{ libro.nombreAutor }}</div>
-                                            <small class="text-muted">{{ libro.codigoAutor }}</small>
-                                        </td>
-                                        <td>{{ libro.isbn }}</td>
-                                        <td><span class="badge bg-secondary">{{ libro.genero }}</span></td>
-                                        <td class="text-center">
-                                            <button class="btn btn-outline-warning btn-sm border-0 me-2" @click.stop="modificarLibro(libro)" title="Editar Libro">
-                                                <i class="bi bi-pencil-square"></i>
-                                            </button>
-                                            <button class="btn btn-outline-danger btn-sm border-0" @click.stop="eliminarLibro(libro.idLibro, libro.titulo, $event)" title="Eliminar Libro">
-                                                <i class="bi bi-trash-fill"></i>
-                                            </button>
-                                        </td>
+                                    <tr v-if="libros.length === 0">
+                                        <td colspan="6" class="py-4 text-muted">No se encontraron libros. Intenta realizar una búsqueda.</td>
                                     </tr>
-                                    <tr v-if="listaLibros.length === 0">
-                                        <td colspan="5" class="text-center text-muted p-4">No se encontraron libros en el inventario.</td>
+                                    <tr v-for="libro in libros" :key="libro.idLibro" @click="modificarLibro(libro)" style="cursor: pointer;" class="transition-hover">
+                                        <td class="fw-bold">{{ libro.isbn }}</td>
+                                        <td>{{ libro.titulo }}</td>
+                                        <td><span class="badge bg-info text-dark">{{ libro.nombre_autor }}</span></td>
+                                        <td>{{ libro.editorial }}</td>
+                                        <td>{{ libro.edicion }}</td>
+                                        <td>
+                                            <button class="btn btn-warning text-white btn-sm px-3 shadow-sm rounded-pill me-2" @click.stop="modificarLibro(libro)">
+                                                <i class="bi bi-pencil-square"></i> EDITAR
+                                            </button>
+                                            <button class="btn btn-danger btn-sm px-3 shadow-sm rounded-pill" @click="eliminarLibro(libro, $event)">
+                                                <i class="bi bi-trash"></i> ELIMINAR
+                                            </button>
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>

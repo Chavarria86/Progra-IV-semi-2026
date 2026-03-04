@@ -1,127 +1,150 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Sistema de Biblioteca</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GESTION DE LIBROS Y AUTORES</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/alertifyjs@1.14.0/build/css/alertify.min.css" />
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/alertifyjs@1.14.0/build/css/themes/default.min.css" />
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/alertifyjs@1.14.0/build/css/themes/semantic.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <style>
         body {
-            background-color: #f8f9fa;
-            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            font-family: 'Poppins', sans-serif;
+            color: #f1f5f9;
         }
 
-        .navbar {
-            border-bottom: 3px solid #0d6efd;
+        .navbar-custom {
+            background: linear-gradient(135deg, #14b8a6, #0f766e);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
         }
 
-        .card {
-            border-radius: 6px;
-            border: 1px solid #dee2e6;
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 1px;
         }
 
-        .card-header {
-            background-color: #0d6efd;
-            color: white;
-            font-weight: bold;
+        .nav-link {
+            color: #f1f5f9 !important;
+            transition: 0.3s ease;
         }
 
-        footer {
-            background-color: #212529;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            margin-top: 40px;
+        .nav-link:hover {
+            color: #14b8a6 !important;
+            transform: translateY(-2px);
+        }
+
+        .card-custom {
+            background: #1e293b;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            padding: 20px;
+        }
+
+        .form-control,
+        .form-select {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #f1f5f9;
+            border-radius: 8px;
+        }
+
+        .form-control:focus {
+            background-color: #0f172a;
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.3);
+            color: #fff;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #14b8a6, #0f766e);
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(20, 184, 166, 0.4);
+        }
+
+        table {
+            color: #f1f5f9;
+        }
+
+        thead {
+            background-color: #0f766e;
+        }
+
+        tbody tr:hover {
+            background-color: rgba(20, 184, 166, 0.1);
         }
     </style>
 </head>
 
 <body>
+    <div id="app">
 
-<div id="app">
+        <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4">
+            <div class="container">
+                <a class="navbar-brand" href="#">
+                    ::. SISTEMA DE GESTION DE LIBROS Y AUTORES .::
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarNavAltMarkup">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+                    <div class="navbar-nav ms-auto">
+                        <a class="nav-link fs-5 px-3" href="#" @click="abrirVentana('autor')">
+                            <i class="bi bi-person-fill"></i> Autores
+                        </a>
+                        <a class="nav-link fs-5 px-3" href="#" @click="abrirVentana('libros')">
+                            <i class="bi bi-book-fill"></i> Libros
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
 
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="#">Sistema de Biblioteca</a>
+        <div id="appSistema" class="container pb-5">
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-10 card-custom">
 
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a class="nav-link"
-                       :class="{ active: forms.autores.mostrar }"
-                       href="#"
-                       @click="abrirVentana('autores')">
-                        Autores
-                    </a>
-                </li>
+                    <autor @buscar='buscar("busqueda_autor","obtenerAutores")' :forms="forms" ref="autor"
+                        v-show="forms.autor.mostrar"></autor>
 
-                <li class="nav-item">
-                    <a class="nav-link"
-                       :class="{ active: forms.libros.mostrar }"
-                       href="#"
-                       @click="abrirVentana('libros')">
-                        Libros
-                    </a>
-                </li>
-            </ul>
+                    <busqueda_autor @modificar='modificar("autor","modificarAutor", $event)' ref="busqueda_autor"
+                        v-show="forms.busqueda_autor.mostrar"></busqueda_autor>
+
+                    <libros @buscar='buscar("busqueda_libros","obtenerLibros")' :forms="forms" ref="libros"
+                        v-show="forms.libros.mostrar"></libros>
+
+                    <busqueda_libros @modificar='modificar("libros","modificarLibro", $event)' ref="busqueda_libros"
+                        v-show="forms.busqueda_libros.mostrar"></busqueda_libros>
+
+                </div>
+            </div>
         </div>
-    </nav>
-
-    <!-- CONTENIDO -->
-    <div class="container mt-4">
-
-        <!-- AUTORES -->
-        <autores
-            ref="autores"
-            :forms="forms"
-            v-show="forms.autores.mostrar"
-            @buscar='buscar("busqueda_autores", "obtenerAutores")'>
-        </autores>
-
-        <busqueda_autores
-            ref="busqueda_autores"
-            v-show="forms.busqueda_autores.mostrar"
-            @modificar='modificar("autores", "modificarAutor", $event)'>
-        </busqueda_autores>
-
-        <!-- LIBROS -->
-        <libros
-            ref="libros"
-            :forms="forms"
-            v-show="forms.libros.mostrar"
-            @buscar='buscar("busqueda_libros", "obtenerLibros")'>
-        </libros>
-
-        <busqueda_libros
-            ref="busqueda_libros"
-            v-show="forms.busqueda_libros.mostrar"
-            @modificar='modificar("libros", "modificarLibro", $event)'>
-        </busqueda_libros>
-
     </div>
 
-    <!-- FOOTER -->
-    <footer>
-        Sistema de Biblioteca © 2026 <br>
-        Ingeniería en Sistemas
-    </footer>
+    <script src="//cdn.jsdelivr.net/npm/alertifyjs@1.14.0/build/alertify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/4.2.0/dexie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
-</div>
-
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-<script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-
-<script src="autores.js"></script>
-<script src="busqueda_autores.js"></script>
-<script src="libros.js"></script>
-<script src="busqueda_libros.js"></script>
-<script src="Main.js"></script>
-
+    <script src="componentes/autor.js"></script>
+    <script src="componentes/busqueda_autor.js"></script>
+    <script src="componentes/libros.js"></script>
+    <script src="componentes/busqueda_libros.js"></script>
+    <script src="main.js"></script>
 </body>
+
 </html>

@@ -1,66 +1,42 @@
 const { createApp } = Vue;
+const Dexie = window.Dexie;
+const sha256 = window.sha256;
 
-// Base de datos
+// 🔹 Crear BD AQUÍ (fuera del createApp)
 const db = new Dexie("db_USSS027724");
 
-// SOLO tablas necesarias
 db.version(1).stores({
-    autores: "++idAutor, codigo, nombre, nacionalidad",
-    libros: "++idLibro, idAutor, titulo, isbn, genero"
+    autor: "idAutor, codigo, nombre, pais, telefono",
+    libros: "idLibro, idAutor, isbn, titulo, editorial, edicion"
 });
 
+// 🔹 Luego Vue
 createApp({
-
     components: {
-        autores,
-        busqueda_autores,
+        autor,
+        busqueda_autor,
         libros,
         busqueda_libros
     },
-
     data() {
         return {
             forms: {
-                autores: { mostrar: true },
-                busqueda_autores: { mostrar: false },
+                autor: { mostrar: false },
+                busqueda_autor: { mostrar: false },
                 libros: { mostrar: false },
                 busqueda_libros: { mostrar: false }
             }
         }
     },
-
     methods: {
-
-        abrirVentana(ventana) {
-            Object.keys(this.forms).forEach(key => {
-                this.forms[key].mostrar = false;
-            });
-
-            this.forms[ventana].mostrar = true;
-        },
-
         buscar(ventana, metodo) {
-            if (this.$refs[ventana]) {
-                this.$refs[ventana][metodo]();
-            }
+            this.$refs[ventana][metodo]();
         },
-
+        abrirVentana(ventana) {
+            this.forms[ventana].mostrar = !this.forms[ventana].mostrar;
+        },
         modificar(ventana, metodo, data) {
-            if (this.$refs[ventana]) {
-                this.$refs[ventana][metodo](data);
-            }
-
-            // Regresar al formulario después de seleccionar
-            if (ventana === "autores") {
-                this.forms.busqueda_autores.mostrar = false;
-                this.forms.autores.mostrar = true;
-            }
-
-            if (ventana === "libros") {
-                this.forms.busqueda_libros.mostrar = false;
-                this.forms.libros.mostrar = true;
-            }
+            this.$refs[ventana][metodo](data);
         }
     }
-
 }).mount("#app");
