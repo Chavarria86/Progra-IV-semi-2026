@@ -1,47 +1,66 @@
-const { createApp } = Vue,
-    Dexie = window.Dexie,
-    db = new Dexie("db_academica");
-    sha256=crypto.sha256;
+const { createApp } = Vue;
+
+// Base de datos
+const db = new Dexie("db_USSS027724");
+
+// SOLO tablas necesarias
+db.version(1).stores({
+    autores: "++idAutor, codigo, nombre, nacionalidad",
+    libros: "++idLibro, idAutor, titulo, isbn, genero"
+});
 
 createApp({
-    components:{
-        alumnos,
-        busqueda_alumnos,
-        materias,
-        busqueda_materias,
-        docentes,
-        busqueda_docentes
+
+    components: {
+        autores,
+        busqueda_autores,
+        libros,
+        busqueda_libros
     },
-    data(){
-        return{
-            forms:{
-                alumnos:{mostrar:false},
-                busqueda_alumnos:{mostrar:false},
-                materias:{mostrar:false},
-                busqueda_materias:{mostrar:false},
-                docentes:{mostrar:false},
-                busqueda_docentes:{mostrar:false},
-                matriculas:{mostrar:false},
-                inscripciones:{mostrar:false}
+
+    data() {
+        return {
+            forms: {
+                autores: { mostrar: true },
+                busqueda_autores: { mostrar: false },
+                libros: { mostrar: false },
+                busqueda_libros: { mostrar: false }
             }
         }
     },
-    methods:{
-        buscar(ventana, metodo){
-            this.$refs[ventana][metodo]();
+
+    methods: {
+
+        abrirVentana(ventana) {
+            Object.keys(this.forms).forEach(key => {
+                this.forms[key].mostrar = false;
+            });
+
+            this.forms[ventana].mostrar = true;
         },
-        abrirVentana(ventana){
-            this.forms[ventana].mostrar = !this.forms[ventana].mostrar;
+
+        buscar(ventana, metodo) {
+            if (this.$refs[ventana]) {
+                this.$refs[ventana][metodo]();
+            }
         },
-        modificar(ventana, metodo, data){
-            this.$refs[ventana][metodo](data);
+
+        modificar(ventana, metodo, data) {
+            if (this.$refs[ventana]) {
+                this.$refs[ventana][metodo](data);
+            }
+
+            // Regresar al formulario después de seleccionar
+            if (ventana === "autores") {
+                this.forms.busqueda_autores.mostrar = false;
+                this.forms.autores.mostrar = true;
+            }
+
+            if (ventana === "libros") {
+                this.forms.busqueda_libros.mostrar = false;
+                this.forms.libros.mostrar = true;
+            }
         }
-    },
-    mounted(){
-        db.version(1).stores({
-            "alumnos": "idAlumno, codigo, nombre, direccion, email, telefono",
-            "materias": "idMateria, codigo, nombre, uv",
-            "docentes": "idDocente, codigo, nombre, direccion, email, telefono, escalafon"
-        });
     }
+
 }).mount("#app");
