@@ -29,30 +29,35 @@ const libros = {
         },
 
         async guardarLibro() {
+            try {
+                if (!this.libro.isbn.trim()) {
+                    alertify.error("El ISBN es obligatorio");
+                    return;
+                }
 
-            if (!this.libro.isbn.trim()) {
-                alertify.error("El ISBN es obligatorio");
-                return;
+                const existe = await db.libros
+                    .where('isbn')
+                    .equals(this.libro.isbn)
+                    .toArray();
+
+                if (existe.length && !this.modoEdicion) {
+                    alertify.warning("Ese ISBN ya existe");
+                    return;
+                }
+
+                this.libro.idLibro = this.modoEdicion
+                    ? this.libro.idLibro
+                    : Date.now();
+
+                // Unwrap the Vue Proxy to avoid DataCloneError in Dexie
+                await db.libros.put(JSON.parse(JSON.stringify(this.libro)));
+
+                alertify.success("Libro guardado correctamente");
+                this.resetFormulario();
+            } catch (error) {
+                console.error("Error al guardar libro:", error);
+                alertify.error("Error al guardar libro observando la consola.");
             }
-
-            const existe = await db.libros
-                .where('isbn')
-                .equals(this.libro.isbn)
-                .toArray();
-
-            if (existe.length && !this.modoEdicion) {
-                alertify.warning("Ese ISBN ya existe");
-                return;
-            }
-
-            this.libro.idLibro = this.modoEdicion
-                ? this.libro.idLibro
-                : Date.now();
-
-            await db.libros.put(this.libro);
-
-            alertify.success("Libro guardado correctamente");
-            this.resetFormulario();
         },
 
         resetFormulario() {

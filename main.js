@@ -2,7 +2,7 @@ const { createApp } = Vue;
 const Dexie = window.Dexie;
 const sha256 = window.sha256;
 
-// 🔹 Crear BD AQUÍ (fuera del createApp)
+
 const db = new Dexie("db_USSS027724");
 
 db.version(1).stores({
@@ -10,7 +10,7 @@ db.version(1).stores({
     libros: "idLibro, idAutor, isbn, titulo, editorial, edicion"
 });
 
-// 🔹 Luego Vue
+
 createApp({
     components: {
         autor,

@@ -33,30 +33,35 @@ const autor = {
         },
 
         async guardarAutor() {
+            try {
+                if (!this.autor.codigo.trim()) {
+                    alertify.error("El código es obligatorio");
+                    return;
+                }
 
-            if (!this.autor.codigo.trim()) {
-                alertify.error("El código es obligatorio");
-                return;
+                const existe = await db.autor
+                    .where('codigo')
+                    .equals(this.autor.codigo)
+                    .toArray();
+
+                if (existe.length && !this.modoEdicion) {
+                    alertify.warning("Ese código ya existe");
+                    return;
+                }
+
+                this.autor.idAutor = this.modoEdicion
+                    ? this.autor.idAutor
+                    : Date.now();
+
+                // To avoid Vue Proxy clone issues in Dexie, let's stringify/parse
+                await db.autor.put(JSON.parse(JSON.stringify(this.autor)));
+
+                alertify.success("Autor guardado correctamente");
+                this.resetFormulario();
+            } catch (err) {
+                alert("Error in guardarAutor: " + err.message + "\nStack: " + err.stack);
+                console.error(err);
             }
-
-            const existe = await db.autor
-                .where('codigo')
-                .equals(this.autor.codigo)
-                .toArray();
-
-            if (existe.length && !this.modoEdicion) {
-                alertify.warning("Ese código ya existe");
-                return;
-            }
-
-            this.autor.idAutor = this.modoEdicion
-                ? this.autor.idAutor
-                : Date.now();
-
-            await db.autor.put(this.autor);
-
-            alertify.success("Autor guardado correctamente");
-            this.resetFormulario();
         },
 
         resetFormulario() {
