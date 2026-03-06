@@ -120,13 +120,13 @@
                     <autor @buscar='buscar("busqueda_autor","obtenerAutores")' :forms="forms" ref="autor"
                         v-show="forms.autor.mostrar"></autor>
 
-                    <busqueda_autor @modificar='modificar("autor","modificarAutor", $event)' ref="busqueda_autor"
+                    <busqueda_autor @modificar='modificar("autor","cargarAutor", $event)' ref="busqueda_autor"
                         v-show="forms.busqueda_autor.mostrar"></busqueda_autor>
 
                     <libros @buscar='buscar("busqueda_libros","obtenerLibros")' :forms="forms" ref="libros"
                         v-show="forms.libros.mostrar"></libros>
 
-                    <busqueda_libros @modificar='modificar("libros","modificarLibro", $event)' ref="busqueda_libros"
+                    <busqueda_libros @modificar='modificar("libros","cargarLibro", $event)' ref="busqueda_libros"
                         v-show="forms.busqueda_libros.mostrar"></busqueda_libros>
 
                 </div>

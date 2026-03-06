@@ -36,6 +36,8 @@ createApp({
             this.forms[ventana].mostrar = !this.forms[ventana].mostrar;
         },
         modificar(ventana, metodo, data) {
+            this.forms[ventana].mostrar = true;
+            this.forms['busqueda_' + ventana].mostrar = false;
             this.$refs[ventana][metodo](data);
         }
     }

@@ -77,6 +77,14 @@ const libros = {
         }
     },
 
+    watch: {
+        'forms.libros.mostrar': function (nuevoValor) {
+            if (nuevoValor) {
+                this.cargarAutores();
+            }
+        }
+    },
+
     mounted() {
         this.cargarAutores();
     },
