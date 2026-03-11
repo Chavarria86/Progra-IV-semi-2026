@@ -38,16 +38,22 @@ const alumnos = {
                 email: this.alumno.email,
                 telefono: this.alumno.telefono
             };
-            datos.hash=sha256(JSSON.stringify(datos));
+            datos.hash = sha256(JSON.stringify(datos));
             this.buscar = datos.codigo;
             //await this.obtenerAlumnos();
 
             if(this.data_alumnos.length > 0 && this.accion=='nuevo'){
-                alert("El codigo del alumno ya existe, "+ this.data_alumnos[0].nombre);
+                alertify.error(`El codigo del alumno ya existe, ${this.data_alumnos[0].nombre}`);
                 return; //Termina la ejecucion de la funcion
             }
             db.alumnos.put(datos);
+            fetch(`private/modulos/alumnos/alumno.php?accion=${this.accion}&alumnos=${JSON.stringify(datos)}`)
+                .then(response=>response.json())
+                .then(data=>{
+                    if(data!=true) alertify.error(`Error al sincronizar con el servidor: ${data}`);
+                });
             this.limpiarFormulario();
+            alertify.success(`${datos.nombre} guardado correctamente`);
             //this.obtenerAlumnos();
         },
         getId(){
