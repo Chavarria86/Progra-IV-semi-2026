@@ -1,146 +1,113 @@
-const docentes = {
-    props:['forms'],
-    data(){
-        return{
-            docente:{
-                idDocente:0,
-                codigo:"",
-                nombre:"",
-                direccion:"",
-                email:"",
-                telefono:"",
-                escalafon:""
-            },
-            accion:'nuevo',
-            idDocente:0,
-            data_docentes:[]
-        }
-    },
-    methods:{
-        buscarDocente(){
-            this.forms.busqueda_docentes.mostrar = !this.forms.busqueda_docentes.mostrar;
-            this.$emit('buscar');
-        },
-        modificarDocente(docente){
-            this.accion = 'modificar';
-            this.idDocente = docente.idDocente;
-            this.docente.codigo = docente.codigo;
-            this.docente.nombre = docente.nombre;
-            this.docente.direccion = docente.direccion;
-            this.docente.email = docente.email;
-            this.docente.telefono = docente.telefono;
-            this.docente.escalafon = docente.escalafon;
-        },
-        async guardarDocente() {
-            let datos = {
-                idDocente: this.accion=='modificar' ? this.idDocente : this.getId(),
-                codigo: this.docente.codigo,
-                nombre: this.docente.nombre,
-                direccion: this.docente.direccion,
-                email: this.docente.email,
-                telefono: this.docente.telefono,
-                escalafon: this.docente.escalafon
-            };
-            this.buscar = datos.codigo;
-            //await this.obtenerDocentes();
+/**
+ * componentes/docentes.js
+ * Componente Vue para el formulario de registro/edición de Docentes
+ */
 
-            if(this.data_docentes.length > 0 && this.accion=='nuevo'){
-                alertify.error(`El codigo del docente ya existe, ${this.data_docentes[0].nombre}`);
-                return; //Termina la ejecucion de la funcion
-            }
-            db.docentes.put(datos);
-            this.limpiarFormulario();
-            alertify.success(`${datos.nombre} guardado correctamente`);
-            //this.obtenerDocentes();
-        },
-        getId(){
-            return new Date().getTime();
-        },
-        limpiarFormulario(){
-            this.accion = 'nuevo';
-            this.idDocente = 0;
-            this.docente.codigo = '';
-            this.docente.nombre = '';
-            this.docente.direccion = '';
-            this.docente.email = '';
-            this.docente.telefono = '';
-            this.docente.escalafon = '';
-        },
-    },
+'use strict';
+
+const docentes = {
+    name: 'docentes',
+    props: ['forms'],
+    emits: ['buscar'],
     template: `
-        <div class="row">
-            <div class="col-6">
-                <form id="frmDocentes" @submit.prevent="guardarDocente" @reset.prevent="limpiarFormulario">
-                    <div class="card text-bg-dark mb-3" style="max-width: 36rem;">
-                        <div class="card-header">REGISTRO DE ALUMNOS</div>
-                        <div class="card-body">
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    CODIGO:
-                                </div>
-                                <div class="col-3">
-                                    <input placeholder="codigo" required v-model="docente.codigo" type="text" class="form-control">
-                                </div>
-                            </div>
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    NOMBRE:
-                                </div>
-                                <div class="col-6">
-                                    <input placeholder="nombre" required v-model="docente.nombre" type="text" class="form-control">
-                                </div>
-                            </div>
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    DIRECCION:
-                                </div>
-                                <div class="col-9">
-                                    <input placeholder="direccion" required v-model="docente.direccion" type="text" class="form-control">
-                                </div>
-                            </div>
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    EMAIL:
-                                </div>
-                                <div class="col-6">
-                                    <input placeholder="email" required v-model="docente.email" type="text" class="form-control">
-                                </div>
-                            </div>
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    TELEFONO:
-                                </div>
-                                <div class="col-4">
-                                    <input placeholder="telefono" required v-model="docente.telefono" type="text" class="form-control">
-                                </div>
-                            </div>
-                            <div class="row p-1">
-                                <div class="col-3">
-                                    ESCALAFON:
-                                </div>
-                                <div class="col-4">
-                                    <select required title="Seleccione un escalafon" v-model="docente.escalafon" class="form-select">
-                                        <option value="tecnico">Tecnico</option>
-                                        <option value="profesor">Profesor</option>
-                                        <option value="ingeniero">Licenciado/Ingeniero</option>
-                                        <option value="maestria">Maestria</option>
-                                        <option value="doctor">Doctor</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-footer">
-                            <div class="row">
-                                <div class="col text-center">
-                                    <button type="submit" id="btnGuardarDocente" class="btn btn-primary">GUARDAR</button>
-                                    <button type="reset" id="btnCancelarDocente" class="btn btn-warning">NUEVO</button>
-                                    <button type="button" @click="buscarDocente" id="btnBuscarDocente" class="btn btn-success">BUSCAR</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
+    <div v-draggable class="card shadow" style="width:480px; top:80px; left:30px;">
+        <div class="card-header d-flex justify-content-between align-items-center bg-warning text-dark">
+            <span>👨‍🏫 Gestión de Docentes</span>
+            <button class="btn btn-sm btn-dark" @click="$emit('buscar')">
+                🔍 Buscar
+            </button>
         </div>
-    `
+        <div class="card-body">
+            <form @submit.prevent>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Código</label>
+                    <input type="text" class="form-control" v-model="form.codigo" placeholder="Ej: DOC-001" maxlength="25" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Nombre completo</label>
+                    <input type="text" class="form-control" v-model="form.nombre" placeholder="Nombre y apellidos" maxlength="150" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Especialidad</label>
+                    <input type="text" class="form-control" v-model="form.especialidad" placeholder="Ej: Matemáticas" maxlength="150" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Teléfono</label>
+                    <input type="text" class="form-control" v-model="form.telefono" placeholder="Ej: 7777-0000" maxlength="10" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Email</label>
+                    <input type="email" class="form-control" v-model="form.email" placeholder="correo@ejemplo.com" maxlength="150" />
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-warning w-100" @click="guardarDocente">
+                        💾 {{ form.id_Docente ? 'Actualizar' : 'Guardar' }}
+                    </button>
+                    <button class="btn btn-secondary w-100" @click="limpiar">
+                        🗑️ Limpiar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    `,
+    data() {
+        return {
+            form: {
+                id_Docente:   '',
+                codigo:       '',
+                nombre:       '',
+                especialidad: '',
+                telefono:     '',
+                email:        ''
+            }
+        };
+    },
+    methods: {
+        limpiar() {
+            this.form = { id_Docente: '', codigo: '', nombre: '', especialidad: '', telefono: '', email: '' };
+        },
+
+        validar() {
+            const { codigo, nombre, telefono, email } = this.form;
+            if (!codigo.trim())   { alertify.warning('El código es requerido.');   return false; }
+            if (!nombre.trim())   { alertify.warning('El nombre es requerido.');   return false; }
+            if (!telefono.trim()) { alertify.warning('El teléfono es requerido.'); return false; }
+            if (!email.trim())    { alertify.warning('El email es requerido.');    return false; }
+            return true;
+        },
+
+        async guardarDocente() {
+            if (!this.validar()) return;
+
+            try {
+                if (this.form.id_Docente) {
+                    await dbExec(
+                        `UPDATE docentes SET codigo=?, nombre=?, especialidad=?, telefono=?, email=? WHERE id_Docente=?`,
+                        [this.form.codigo, this.form.nombre, this.form.especialidad,
+                         this.form.telefono, this.form.email, this.form.id_Docente]
+                    );
+                    alertify.success('Docente actualizado correctamente.');
+                } else {
+                    const id_Docente = uuid.v4();
+                    await dbExec(
+                        `INSERT INTO docentes (id_Docente, codigo, nombre, especialidad, telefono, email)
+                         VALUES (?, ?, ?, ?, ?, ?)`,
+                        [id_Docente, this.form.codigo, this.form.nombre,
+                         this.form.especialidad, this.form.telefono, this.form.email]
+                    );
+                    alertify.success('Docente guardado correctamente.');
+                }
+                this.limpiar();
+                this.$emit('buscar');
+            } catch (e) {
+                console.error(e);
+                alertify.error('Error al guardar docente: ' + e.message);
+            }
+        },
+
+        modificarDocente(data) {
+            this.form = { ...data };
+        }
+    }
 };

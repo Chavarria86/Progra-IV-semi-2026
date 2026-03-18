@@ -3,54 +3,136 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title></title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/alertifyjs@1.14.0/build/css/alertify.min.css"/>
-    <!-- Default theme -->
-    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/alertifyjs@1.14.0/build/css/themes/default.min.css"/>
-    <!-- Semantic UI theme -->
-    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/alertifyjs@1.14.0/build/css/themes/semantic.min.css"/>
+    <title>Sistema Académico</title>
+    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="vendor/alertifyjs/build/css/alertify.min.css" />
+    <link rel="stylesheet" href="vendor/alertifyjs/build/css/themes/default.min.css" />
+    <link rel="stylesheet" href="vendor/alertifyjs/build/css/themes/semantic.min.css" />
+    <style>
+        body { background: #f0f4f8; }
+        #appSistema { min-height: 80vh; }
+        .navbar { z-index: 2000; }
+        .card { border-radius: 10px; }
+        .card-header { border-radius: 10px 10px 0 0 !important; }
+    </style>
 </head>
 <body>
     <div id="app">
-        <nav class="navbar navbar-expand-lg bg-light">
+        <nav class="navbar navbar-expand-lg bg-light shadow-sm">
             <div class="container-fluid">
-                <a class="navbar-brand" href="#">::.. SISTEMA ACADEMICO ..::</a>
+                <a class="navbar-brand fw-bold" href="#">::.. SISTEMA ACADEMICO ..::</a>
                 <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
                     <div class="navbar-nav">
-                        <a class="nav-link" href="#" @click="abrirVentana('alumnos')">Alumnos</a>
-                        <a class="nav-link" href="#" @click="abrirVentana('materias')">Materias</a>
-                        <a class="nav-link" href="#" @click="abrirVentana('docentes')">Docentes</a>
-                        <a class="nav-link" href="#" @click="abrirVentana('matriculas')">Matriculas</a>
-                        <a class="nav-link" href="#" @click="abrirVentana('inscripciones')">Inscripciones</a>
+                        <a class="nav-link" href="#" @click.prevent="abrirVentana('alumnos')">Alumnos</a>
+                        <a class="nav-link" href="#" @click.prevent="abrirVentana('materias')">Materias</a>
+                        <a class="nav-link" href="#" @click.prevent="abrirVentana('docentes')">Docentes</a>
+                        <a class="nav-link" href="#" @click.prevent="abrirVentana('matriculas')">Matrículas</a>
+                        <a class="nav-link" href="#" @click.prevent="abrirVentana('inscripciones')">Inscripciones</a>
                     </div>
                 </div>
             </div>
         </nav>
-        <div id="appSistema" class="container-fluid">
-            <alumnos @buscar='buscar("busqueda_alumnos","obtenerAlumnos")' :forms="forms" ref="alumnos" v-show="forms.alumnos.mostrar"></alumnos>
-            <busqueda_alumnos @modificar='modificar("alumnos","modificarAlumno", $event)' ref="busqueda_alumnos" v-show="forms.busqueda_alumnos.mostrar"></busqueda_alumnos>
 
-            <materias @buscar='buscar("busqueda_materias","obtenerMaterias")' :forms="forms" ref="materias" v-show="forms.materias.mostrar"></materias>
-            <busqueda_materias @modificar='modificar("materias","modificarMateria", $event)' ref="busqueda_materias" v-show="forms.busqueda_materias.mostrar"></busqueda_materias>
+        <div id="appSistema" class="container-fluid" style="position: relative;">
 
-            <docentes @buscar='buscar("busqueda_docentes","obtenerDocentes")' :forms="forms" ref="docentes" v-show="forms.docentes.mostrar"></docentes>
-            <busqueda_docentes @modificar='modificar("docentes","modificarDocente", $event)' ref="busqueda_docentes" v-show="forms.busqueda_docentes.mostrar"></busqueda_docentes>
+            <!-- ALUMNOS -->
+            <alumnos
+                @buscar='buscar("busqueda_alumnos","obtenerAlumnos")'
+                :forms="forms"
+                ref="alumnos"
+                v-show="forms.alumnos.mostrar">
+            </alumnos>
+            <buscar_alumnos
+                @modificar='modificar("alumnos","modificarAlumno", $event)'
+                :forms="forms"
+                ref="busqueda_alumnos"
+                v-show="forms.busqueda_alumnos.mostrar">
+            </buscar_alumnos>
+
+            <!-- MATERIAS -->
+            <materias
+                @buscar='buscar("busqueda_materias","obtenerMaterias")'
+                :forms="forms"
+                ref="materias"
+                v-show="forms.materias.mostrar">
+            </materias>
+            <buscar_materias
+                @modificar='modificar("materias","modificarMateria", $event)'
+                :forms="forms"
+                ref="busqueda_materias"
+                v-show="forms.busqueda_materias.mostrar">
+            </buscar_materias>
+
+            <!-- DOCENTES -->
+            <docentes
+                @buscar='buscar("busqueda_docentes","obtenerDocentes")'
+                :forms="forms"
+                ref="docentes"
+                v-show="forms.docentes.mostrar">
+            </docentes>
+            <buscar_docentes
+                @modificar='modificar("docentes","modificarDocente", $event)'
+                :forms="forms"
+                ref="busqueda_docentes"
+                v-show="forms.busqueda_docentes.mostrar">
+            </buscar_docentes>
+
+            <!-- MATRÍCULAS -->
+            <matriculas
+                @buscar='buscar("busqueda_matriculas","obtenerMatriculas")'
+                :forms="forms"
+                ref="matriculas"
+                v-show="forms.matriculas.mostrar">
+            </matriculas>
+            <buscar_matriculas
+                @modificar='modificar("matriculas","modificarMatricula", $event)'
+                :forms="forms"
+                ref="busqueda_matriculas"
+                v-show="forms.busqueda_matriculas.mostrar">
+            </buscar_matriculas>
+
+            <!-- INSCRIPCIONES -->
+            <inscripciones
+                @buscar='buscar("busqueda_inscripciones","obtenerInscripciones")'
+                :forms="forms"
+                ref="inscripciones"
+                v-show="forms.inscripciones.mostrar">
+            </inscripciones>
+            <buscar_inscripciones
+                @modificar='modificar("inscripciones","modificarInscripcion", $event)'
+                :forms="forms"
+                ref="busqueda_inscripciones"
+                v-show="forms.busqueda_inscripciones.mostrar">
+            </buscar_inscripciones>
+
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
-    <script src="//cdn.jsdelivr.net/npm/alertifyjs@1.14.0/build/alertify.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/4.2.0/dexie.min.js"
-        integrity="sha512-LuXLH9xON6/aAGYxi4Z1Dx8588Z80gY3iMmGtUlYmblUc1ulC/cGHuANXIvm8fnIWp5ShUk2MRBIWylGguXF9g=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="componentes/alumnos.js"></script>
-    <script src="componentes/busqueda_alumnos.js"></script>
-    <script src="componentes/materias.js"></script>
-    <script src="componentes/busqueda_materias.js"></script>
-    <script src="componentes/docentes.js"></script>
-    <script src="componentes/busqueda_docentes.js"></script>
-    <script src="main.js"></script>
+
+    <!-- VENDOR -->
+    <script src="vendor/alertifyjs/build/alertify.min.js?v=sqlite-opfs-2"></script>
+    <script src="vendor/bootstrap/js/bootstrap.bundle.min.js?v=sqlite-opfs-2"></script>
+    <script src="vendor/vue.global.prod.js?v=sqlite-opfs-2"></script>
+    <script src="vendor/sqlite3-wasm/dist/sqlite-wasm-3510300/jswasm/sqlite3-worker1-promiser.js?v=sqlite-opfs-2"></script>
+
+    <!-- BASE DE DATOS (SQLite WASM + OPFS) -->
+    <script src="db/sqlite-db.js?v=sqlite-opfs-2"></script>
+
+    <!-- DIRECTIVAS -->
+    <script src="directivas/draggable.js?v=sqlite-opfs-2"></script>
+
+    <!-- COMPONENTES -->
+    <script src="componentes/alumnos.js?v=sqlite-opfs-2"></script>
+    <script src="componentes/busqueda_alumnos.js?v=sqlite-opfs-2"></script>
+    <script src="componentes/materias.js?v=sqlite-opfs-2"></script>
+    <script src="componentes/busqueda_materias.js?v=sqlite-opfs-2"></script>
+    <script src="componentes/docentes.js?v=sqlite-opfs-2"></script>
+    <script src="componentes/busqueda_docentes.js?v=sqlite-opfs-2"></script>
+    <script src="componentes/matriculas.js?v=sqlite-opfs-2"></script>
+    <script src="componentes/busqueda_matriculas.js?v=sqlite-opfs-2"></script>
+    <script src="componentes/inscripciones.js?v=sqlite-opfs-2"></script>
+    <script src="componentes/busqueda_inscripciones.js?v=sqlite-opfs-2"></script>
+
+    <!-- APP PRINCIPAL -->
+    <script src="main.js?v=sqlite-opfs-2"></script>
 </body>
 </html>
