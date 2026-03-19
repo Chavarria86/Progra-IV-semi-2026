@@ -30,6 +30,10 @@ try {
         $resultado = $db->consultaSQL($sql, $matriculas['idMatricula']);
         if (is_string($resultado)) echo json_encode(['error' => $resultado]);
         else echo json_encode(true);
+    } else if($accion == 'consultar'){
+        $sql = "SELECT idMatricula, idAlumno, idMateria, idDocente, fecha, estado, periodo, gestion FROM matriculas";
+        $db->consultaSQL($sql);
+        echo json_encode($db->obtener_datos());
     }
 } catch (Exception $e) {
     echo json_encode(['error' => 'Fatal Exception: ' . $e->getMessage()]);

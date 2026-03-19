@@ -25,13 +25,19 @@ const busqueda_matriculas = {
         },
         async obtenerMatriculas() {
             await this.obtenerDatosRelacionados();
-            // Filtramos localmente en Dexie
+            let term = this.buscar.toLowerCase();
             let todas = await db.matriculas.toArray();
             this.matriculas = todas.filter(m => {
                 const nombreAlumno = (this.alumnos[m.idAlumno] || '').toLowerCase();
-                const periodo = (m.periodo || '').toLowerCase();
-                const busqueda = this.buscar.toLowerCase();
-                return nombreAlumno.includes(busqueda) || periodo.includes(busqueda);
+                const nombreMateria = (this.materias[m.idMateria] || '').toLowerCase();
+                const nombreDocente = (this.docentes[m.idDocente] || '').toLowerCase();
+                
+                // Buscar en los nombres resueltos
+                const matchResueltos = nombreAlumno.includes(term) || nombreMateria.includes(term) || nombreDocente.includes(term);
+                // Buscar en los campos directos de la base
+                const matchBase = Object.values(m).some(val => String(val).toLowerCase().includes(term));
+                
+                return matchResueltos || matchBase;
             });
         },
         async editarMatricula(matricula) {

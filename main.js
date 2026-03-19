@@ -50,10 +50,12 @@ createApp({
             this.$refs[ventana][metodo](data);
         },
         async sincronizarTablas() {
-            const tablas = ['alumnos', 'materias', 'docentes'];
+            const tablas = ['alumnos', 'materias', 'docentes', 'matriculas', 'inscripciones'];
             tablas.forEach(tabla => {
-                // Ajustamos la ruta según tu estructura de carpetas
-                const endpoint = tabla === 'alumnos' ? 'alumno' : (tabla === 'materias' ? 'materia' : 'docentes');
+                let endpoint = tabla;
+                if (tabla === 'alumnos') endpoint = 'alumno';
+                else if (tabla === 'materias') endpoint = 'materia';
+                
                 fetch(`private/modulos/${tabla}/${endpoint}.php?accion=consultar`)
                     .then(res => res.json())
                     .then(datos => {

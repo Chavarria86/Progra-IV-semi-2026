@@ -33,7 +33,7 @@ const inscripciones = {
                                             <select class="form-select" v-model="formData.idAlumno" required>
                                                 <option value="">Seleccionar alumno</option>
                                                 <option v-for="alumno in alumnos" :key="alumno.idAlumno" :value="alumno.idAlumno">
-                                                    {{ alumno.nombre }} {{ alumno.apellido || '' }}
+                                                    {{ alumno.nombre }}
                                                 </option>
                                             </select>
                                         </div>
@@ -63,6 +63,11 @@ const inscripciones = {
                         </div>
                     </div>
                     
+                    <!-- Filtro -->
+                    <div class="mb-3">
+                        <input type="search" v-model="buscar" @keyup="filtrarInscripciones" class="form-control" placeholder="Buscar inscripción por alumno, materia o fecha...">
+                    </div>
+                    
                     <!-- Tabla de inscripciones -->
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped">
@@ -76,7 +81,7 @@ const inscripciones = {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="inscripcion in inscripciones" :key="inscripcion.idInscripcion">
+                                <tr v-for="inscripcion in inscripcionesFiltradas" :key="inscripcion.idInscripcion">
                                     <td>{{ inscripcion.idInscripcion }}</td>
                                     <td>{{ obtenerNombreAlumno(inscripcion.idAlumno) }}</td>
                                     <td>{{ obtenerNombreMateria(inscripcion.idMateria) }}</td>
@@ -86,7 +91,7 @@ const inscripciones = {
                                         <button class="btn btn-sm btn-danger" @click="eliminarInscripcion(inscripcion.idInscripcion)">Eliminar</button>
                                     </td>
                                 </tr>
-                                <tr v-if="inscripciones.length === 0">
+                                <tr v-if="inscripcionesFiltradas.length === 0">
                                     <td colspan="5" class="text-center">No hay inscripciones</td>
                                 </tr>
                             </tbody>
@@ -106,7 +111,9 @@ const inscripciones = {
     
     data() {
         return {
+            buscar: '',
             inscripciones: [],
+            inscripcionesFiltradas: [],
             alumnos: [],
             materias: [],
             mostrarModal: false,
@@ -170,17 +177,29 @@ const inscripciones = {
         async cargarInscripciones() {
             try {
                 this.inscripciones = await db.inscripciones.toArray();
+                this.filtrarInscripciones();
                 console.log('Inscripciones cargadas:', this.inscripciones);
             } catch (error) {
                 console.error('Error cargando inscripciones:', error);
             }
         },
         
+        filtrarInscripciones() {
+            let term = this.buscar.toLowerCase();
+            this.inscripcionesFiltradas = this.inscripciones.filter(i => {
+                const nombreAlumno = this.obtenerNombreAlumno(i.idAlumno).toLowerCase();
+                const nombreMateria = this.obtenerNombreMateria(i.idMateria).toLowerCase();
+                const matchResueltos = nombreAlumno.includes(term) || nombreMateria.includes(term);
+                const matchBase = Object.values(i).some(val => String(val).toLowerCase().includes(term));
+                return matchResueltos || matchBase;
+            });
+        },
+        
         async crearAlumnosPrueba() {
             const alumnosPrueba = [
-                { idAlumno: 1, codigo: 'A001', nombre: 'Juan', apellido: 'Pérez' },
-                { idAlumno: 2, codigo: 'A002', nombre: 'María', apellido: 'García' },
-                { idAlumno: 3, codigo: 'A003', nombre: 'Carlos', apellido: 'López' }
+                { idAlumno: 1, codigo: 'A001', nombre: 'Juan Pérez' },
+                { idAlumno: 2, codigo: 'A002', nombre: 'María García' },
+                { idAlumno: 3, codigo: 'A003', nombre: 'Carlos López' }
             ];
             
             for (let alumno of alumnosPrueba) {
@@ -208,7 +227,7 @@ const inscripciones = {
         
         obtenerNombreAlumno(id) {
             const alumno = this.alumnos.find(a => a.idAlumno === id);
-            return alumno ? `${alumno.nombre} ${alumno.apellido}` : 'Desconocido';
+            return alumno ? alumno.nombre : 'Desconocido';
         },
         
         obtenerNombreMateria(id) {
