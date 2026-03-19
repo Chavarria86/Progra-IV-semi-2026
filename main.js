@@ -1,17 +1,28 @@
 const { createApp } = Vue,
     Dexie = window.Dexie,
     db = new Dexie("db_academica"),
-    sha256 = CryptoJS.SHA256;
+    sha256 = CryptoJS.SHA256,
+    uuid = window.uuid;
 
+db.version(1).stores({
+    "alumnos": "idAlumno, codigo, nombre, direccion, email, telefono",
+    "materias": "idMateria, codigo, nombre, uv",
+    "docentes": "idDocente, codigo, nombre, direccion, email, telefono, escalafon",
+    "matriculas": "idMatricula, idAlumno, idMateria, idDocente, fecha, estado",
+    "inscripciones": "idInscripcion, idAlumno, idMateria, fecha, estado"
+});
 
 createApp({
     components:{
         alumnos,
-        busqueda_alumnos,
+        buscar_alumnos,
         materias,
-        busqueda_materias,
+        buscar_materias,
         docentes,
-        busqueda_docentes
+        buscar_docentes,
+        matriculas,
+        busqueda_matriculas,
+        inscripciones
     },
     data(){
         return{
@@ -23,6 +34,7 @@ createApp({
                 docentes:{mostrar:false},
                 busqueda_docentes:{mostrar:false},
                 matriculas:{mostrar:false},
+                busqueda_matriculas:{mostrar:false},
                 inscripciones:{mostrar:false}
             }
         }
@@ -36,13 +48,26 @@ createApp({
         },
         modificar(ventana, metodo, data){
             this.$refs[ventana][metodo](data);
+        },
+        async sincronizarTablas() {
+            const tablas = ['alumnos', 'materias', 'docentes'];
+            tablas.forEach(tabla => {
+                // Ajustamos la ruta según tu estructura de carpetas
+                const endpoint = tabla === 'alumnos' ? 'alumno' : (tabla === 'materias' ? 'materia' : 'docentes');
+                fetch(`private/modulos/${tabla}/${endpoint}.php?accion=consultar`)
+                    .then(res => res.json())
+                    .then(datos => {
+                        if (Array.isArray(datos)) {
+                            db[tabla].clear().then(() => {
+                                db[tabla].bulkPut(datos);
+                            });
+                        }
+                    })
+                    .catch(err => console.error(`Error sincronizando ${tabla}:`, err));
+            });
         }
     },
     mounted(){
-        db.version(1).stores({
-            "alumnos": "idAlumno, codigo, nombre, direccion, email, telefono",
-            "materias": "idMateria, codigo, nombre, uv",
-            "docentes": "idDocente, codigo, nombre, direccion, email, telefono, escalafon"
-        });
+        this.sincronizarTablas();
     }
-}).mount("#app");
+}).directive('draggable', vDraggable).mount("#app");
