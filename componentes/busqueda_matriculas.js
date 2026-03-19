@@ -1,3 +1,6 @@
+// componentes/busqueda_matriculas.js
+const workerBusquedaMatriculas = new Worker('db/worker.js');
+
 const busqueda_matriculas = {
     data() {
         return {
@@ -9,36 +12,41 @@ const busqueda_matriculas = {
         modificarMatricula(matricula) {
             this.$emit('modificar', matricula);
         },
-        async obtenerMatriculas() {
-            try {
-                let resultados = [];
-                if (this.buscar.trim() === "") {
-                    resultados = await db.matriculas.toArray();
-                } else {
-                    let texto = this.buscar.toLowerCase();
-                    resultados = await db.matriculas.filter(m => 
-                        m.ciclo.toLowerCase().includes(texto)
-                    ).toArray();
+        obtenerMatriculas() {
+            // Mandamos a buscar con JOIN directamente en SQL
+            workerBusquedaMatriculas.postMessage({ 
+                type: 'BUSCAR_MATRICULAS_COMPLETAS', 
+                data: { termino: this.buscar.trim() } 
+            });
+
+            workerBusquedaMatriculas.onmessage = (e) => {
+                if (e.data.type === 'RESULTADO_BUSQUEDA_MATRICULAS') {
+                    this.listaMatriculas = e.data.data;
+                } else if (e.data.type === 'ERROR') {
+                    console.error("Error desde SQLite:", e.data.message);
                 }
-                // JOIN manual para obtener nombres
-                this.listaMatriculas = await Promise.all(resultados.map(async (m) => {
-                    let alumno = await db.alumnos.get(m.idAlumno);
-                    return {
-                        ...m,
-                        nombreAlumno: alumno ? alumno.nombre : '---',
-                        codigoAlumno: alumno ? alumno.codigo : '---'
-                    };
-                }));
-            } catch (error) {
-                console.error("Error cargando matrículas: ", error);
-            }
+            };
         },
-        async eliminarMatricula(id, e) {
+        eliminarMatricula(id, e) {
             if(e) e.stopPropagation();
-            if (confirm("¿Eliminar matrícula?")) {
-                await db.matriculas.delete(id);
-                this.obtenerMatriculas();
-            }
+            
+            alertify.confirm("Confirmar Eliminación", "¿Está seguro de eliminar esta matrícula?", 
+                () => {
+                    workerBusquedaMatriculas.postMessage({ 
+                        type: 'ELIMINAR_MATRICULA', 
+                        data: { idMatricula: id } 
+                    });
+
+                    workerBusquedaMatriculas.onmessage = (e) => {
+                        if (e.data.type === 'SUCCESS_ELIMINAR_MATRICULA') {
+                            alertify.success('Matrícula eliminada');
+                            this.obtenerMatriculas();
+                        }
+                    };
+                },
+                () => { // Cancelar
+                }
+            );
         }
     },
     mounted() {
@@ -50,9 +58,12 @@ const busqueda_matriculas = {
                 <div class="card card-custom">
                     <div class="card-header-custom d-flex justify-content-between align-items-center">
                         <span>HISTORIAL DE MATRÍCULAS</span>
-                        <div class="input-group" style="max-width: 300px;">
-                            <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
-                            <input type="search" v-model="buscar" @keyup="obtenerMatriculas" class="form-control border-0 shadow-none" placeholder="Buscar por ciclo...">
+                        <div class="d-flex align-items-center">
+                            <div class="input-group me-3" style="max-width: 300px;">
+                                <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
+                                <input type="search" v-model="buscar" @keyup="obtenerMatriculas" class="form-control border-0 shadow-none" placeholder="Buscar alumno o ciclo...">
+                            </div>
+                            <button type="button" class="btn-close btn-close-white" @click="$emit('cerrar-todo')" aria-label="Close"></button>
                         </div>
                     </div>
                     <div class="card-body p-0">

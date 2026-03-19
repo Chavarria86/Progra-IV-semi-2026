@@ -1,3 +1,6 @@
+// componentes/busqueda_inscripciones.js
+const workerBusquedaInscrip = new Worker('db/worker.js');
+
 const busqueda_inscripciones = {
     data() {
         return {
@@ -6,43 +9,41 @@ const busqueda_inscripciones = {
         }
     },
     methods: {
-        async obtenerInscripciones() {
-            try {
-                let resultados = await db.inscripciones.toArray();
+        obtenerInscripciones() {
+            // Le pedimos al worker que haga el JOIN y el filtrado directo en SQL
+            workerBusquedaInscrip.postMessage({ 
+                type: 'BUSCAR_INSCRIPCIONES_COMPLETAS', 
+                data: { termino: this.buscar.trim() } 
+            });
 
-                // Triple JOIN manual
-                let listadoCompleto = await Promise.all(resultados.map(async (ins) => {
-                    let alumno = await db.alumnos.get(ins.idAlumno);
-                    let materia = await db.materias.get(ins.idMateria);
-                    return {
-                        ...ins,
-                        nombreAlumno: alumno ? alumno.nombre : '---',
-                        codigoAlumno: alumno ? alumno.codigo : '---',
-                        nombreMateria: materia ? materia.nombre : '---',
-                        codigoMateria: materia ? materia.codigo : '---'
-                    };
-                }));
-
-                // Filtro en memoria
-                if (this.buscar.trim() !== "") {
-                    let texto = this.buscar.toLowerCase();
-                    this.listaInscripciones = listadoCompleto.filter(item => 
-                        item.nombreAlumno.toLowerCase().includes(texto) || 
-                        item.nombreMateria.toLowerCase().includes(texto)
-                    );
-                } else {
-                    this.listaInscripciones = listadoCompleto;
+            workerBusquedaInscrip.onmessage = (e) => {
+                if (e.data.type === 'RESULTADO_BUSQUEDA_INSCRIPCIONES') {
+                    this.listaInscripciones = e.data.data;
+                } else if (e.data.type === 'ERROR') {
+                    console.error("Error desde SQLite:", e.data.message);
                 }
-            } catch (error) {
-                console.error("Error cargando inscripciones: ", error);
-            }
+            };
         },
-        async eliminarInscripcion(id, e) {
+        eliminarInscripcion(id, e) {
             if(e) e.stopPropagation();
-            if (confirm("¿Eliminar inscripción?")) {
-                await db.inscripciones.delete(id);
-                this.obtenerInscripciones();
-            }
+            
+            alertify.confirm("Confirmar Eliminación", "¿Está seguro de eliminar esta inscripción?", 
+                () => {
+                    workerBusquedaInscrip.postMessage({ 
+                        type: 'ELIMINAR_INSCRIPCION', 
+                        data: { idInscripcion: id } 
+                    });
+
+                    workerBusquedaInscrip.onmessage = (e) => {
+                        if (e.data.type === 'SUCCESS_ELIMINAR_INSCRIPCION') {
+                            alertify.success('Inscripción eliminada');
+                            this.obtenerInscripciones();
+                        }
+                    };
+                },
+                () => { // Cancelar
+                }
+            );
         }
     },
     mounted() {
@@ -54,9 +55,12 @@ const busqueda_inscripciones = {
                 <div class="card card-custom">
                     <div class="card-header-custom d-flex justify-content-between align-items-center">
                         <span>INSCRIPCIONES REALIZADAS</span>
-                        <div class="input-group" style="max-width: 300px;">
-                            <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
-                            <input type="search" v-model="buscar" @keyup="obtenerInscripciones" class="form-control border-0 shadow-none" placeholder="Buscar alumno o materia...">
+                        <div class="d-flex align-items-center">
+                            <div class="input-group me-3" style="max-width: 300px;">
+                                <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
+                                <input type="search" v-model="buscar" @keyup="obtenerInscripciones" class="form-control border-0 shadow-none" placeholder="Buscar alumno o materia...">
+                            </div>
+                            <button type="button" class="btn-close btn-close-white" @click="$emit('cerrar-todo')" aria-label="Close"></button>
                         </div>
                     </div>
                     <div class="card-body p-0">

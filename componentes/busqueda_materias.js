@@ -1,35 +1,38 @@
+// componentes/busqueda_materias.js
+const workerBusquedaMateria = new Worker('db/worker.js');
+
 const busqueda_materias = {
     data() {
-        return {
-            buscar: '',
-            materias: []
-        }
+        return { buscar: '', materias: [] }
     },
     methods: {
         modificarMateria(materia) {
             this.$emit('modificar', materia);
         },
-        async obtenerMaterias() {
-            try {
-                if (this.buscar.trim() === "") {
-                    this.materias = await db.materias.toArray();
-                } else {
-                    let texto = this.buscar.toLowerCase();
-                    this.materias = await db.materias.filter(materia => 
-                        materia.codigo.toLowerCase().includes(texto) || 
-                        materia.nombre.toLowerCase().includes(texto)
-                    ).toArray();
+        obtenerMaterias() {
+            workerBusquedaMateria.postMessage({ type: 'BUSCAR_MATERIAS', data: { termino: this.buscar.trim() } });
+            
+            workerBusquedaMateria.onmessage = (e) => {
+                if (e.data.type === 'RESULTADO_BUSQUEDA_MATERIAS') {
+                    this.materias = e.data.data;
                 }
-            } catch (error) {
-                console.error("Error cargando materias: ", error);
-            }
+            };
         },
-        async eliminarMateria(idMateria, e) {
+        eliminarMateria(idMateria, e) {
             if(e) e.stopPropagation(); 
-            if (confirm("¿Está seguro de eliminar esta materia?")) {
-                await db.materias.delete(idMateria);
-                this.obtenerMaterias();
-            }
+            
+            alertify.confirm("Confirmar Eliminación", "¿Está seguro de eliminar esta materia?", 
+                () => {
+                    workerBusquedaMateria.postMessage({ type: 'ELIMINAR_MATERIA', data: { idMateria: idMateria } });
+                    workerBusquedaMateria.onmessage = (e) => {
+                        if (e.data.type === 'SUCCESS_ELIMINAR_MATERIA') {
+                            alertify.success('Materia eliminada');
+                            this.obtenerMaterias(); 
+                        }
+                    };
+                },
+                () => { }
+            );
         }
     },
     mounted() {
@@ -41,9 +44,12 @@ const busqueda_materias = {
                 <div class="card card-custom">
                     <div class="card-header-custom d-flex justify-content-between align-items-center">
                         <span>LISTADO DE MATERIAS</span>
-                        <div class="input-group" style="max-width: 300px;">
-                            <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
-                            <input type="search" v-model="buscar" @keyup="obtenerMaterias" class="form-control border-0 shadow-none" placeholder="Buscar materia...">
+                        <div class="d-flex align-items-center">
+                            <div class="input-group me-3" style="max-width: 300px;">
+                                <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
+                                <input type="search" v-model="buscar" @keyup="obtenerMaterias" class="form-control border-0 shadow-none" placeholder="Buscar...">
+                            </div>
+                            <button type="button" class="btn-close btn-close-white" @click="$emit('cerrar-todo')" aria-label="Close"></button>
                         </div>
                     </div>
                     <div class="card-body p-0">

@@ -1,3 +1,5 @@
+const worker = new Worker('/db/worker.js');
+
 const alumnos = {
     props: ['forms'],
     data() {
@@ -20,29 +22,36 @@ const alumnos = {
             this.idAlumno = alumno.idAlumno;
             this.alumno = { ...alumno }; 
         },
-        async guardarAlumno() {
+        guardarAlumno() {
+            console.log("1. Botón presionado. Preparando datos...");
             let datos = { ...this.alumno };
-            // GENERAMOS ID MANUALMENTE
             datos.idAlumno = this.accion == 'modificar' ? this.idAlumno : new Date().getTime();
 
-            try {
-                if (this.accion === 'nuevo') {
-                    // Validación simple
-                    let n = await db.alumnos.where("codigo").equals(datos.codigo).count();
-                    if (n > 0) { return alert("El código ya existe: " + datos.codigo); }
+            console.log("2. Enviando datos a SQLite...", datos);
+            worker.postMessage({ type: 'GUARDAR_ALUMNO', data: datos });
+
+            worker.onmessage = (e) => {
+                console.log("3. El Worker respondió:", e.data);
+                
+                if (e.data.type === 'SUCCESS') {
+                    // Plan B: Si Alertify falló por la ruta, usamos el alert normal para no congelar
+                    if (typeof alertify !== 'undefined') {
+                        alertify.success(this.accion === 'nuevo' ? "Alumno registrado." : "Alumno actualizado.");
+                    } else {
+                        alert("¡Éxito! Alumno guardado (Ojo: Alertify no está cargando bien).");
+                    }
                     
-                    await db.alumnos.put(datos);
-                    alert("Alumno registrado.");
-                } else {
-                    await db.alumnos.put(datos);
-                    alert("Alumno actualizado.");
+                    this.limpiarFormulario();
+                    this.$emit('buscar'); 
+                } else if (e.data.type === 'ERROR') {
+                    console.error("Error devuelto por SQLite:", e.data.message);
+                    if (e.data.message.includes("UNIQUE constraint failed")) {
+                        alert("Error: Ese CÓDIGO ya existe en la base de datos.");
+                    } else {
+                        alert("Error al guardar: " + e.data.message);
+                    }
                 }
-                this.limpiarFormulario();
-                this.buscarAlumno(); 
-            } catch (error) {
-                console.error(error);
-                alert("Error: " + error);
-            }
+            };
         },
         limpiarFormulario() {
             this.accion = 'nuevo';
@@ -58,7 +67,10 @@ const alumnos = {
             <div class="col-md-8">
                 <form @submit.prevent="guardarAlumno" @reset.prevent="limpiarFormulario">
                     <div class="card card-custom">
-                        <div class="card-header-custom text-center">REGISTRO DE ALUMNO</div>
+                        <div class="card-header-custom d-flex justify-content-between align-items-center p-3">
+                            <span>REGISTRO DE ALUMNO</span>
+                            <button type="button" class="btn-close btn-close-white" @click="$emit('cerrar-todo')" aria-label="Close"></button>
+                        </div>
                         <div class="card-body p-4">
                             <div class="row g-3">
                                 <div class="col-md-6"><label class="form-label-custom">CÓDIGO:</label><input required v-model="alumno.codigo" type="text" class="form-control" :disabled="accion === 'modificar'"></div>

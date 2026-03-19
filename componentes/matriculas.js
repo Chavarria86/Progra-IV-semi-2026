@@ -1,3 +1,6 @@
+// componentes/matriculas.js
+const workerMatricula = new Worker('db/worker.js');
+
 const matriculas = {
     props: ['forms'],
     components: {
@@ -17,47 +20,57 @@ const matriculas = {
             idMatricula: 0
         }
     },
-    // --- NUEVO BLOQUE: OBSERVADOR ---
     watch: {
         "forms.matriculas.mostrar"(nuevoValor) {
-            // Si la ventana se abre (nuevoValor == true), recargamos la lista
             if (nuevoValor) {
                 this.cargarAlumnos();
             }
         }
     },
-    // --------------------------------
     methods: {
         buscarMatricula() {
             this.forms.busqueda_matriculas.mostrar = !this.forms.busqueda_matriculas.mostrar;
             this.$emit('buscar');
         },
-        async cargarAlumnos() {
-            let datos = await db.alumnos.toArray();
-            this.listadoAlumnos = datos.map(alumno => ({
-                label: `${alumno.codigo} - ${alumno.nombre}`,
-                id: alumno.idAlumno
-            }));
+        cargarAlumnos() {
+            // Le pedimos al worker la lista de alumnos
+            workerMatricula.postMessage({ type: 'OBTENER_LISTA_ALUMNOS' });
+            
+            // Centralizamos las respuestas del worker aquí
+            workerMatricula.onmessage = (e) => {
+                if (e.data.type === 'RESULTADO_LISTA_ALUMNOS') {
+                    this.listadoAlumnos = e.data.data.map(a => ({
+                        label: `${a.codigo} - ${a.nombre}`, id: a.idAlumno
+                    }));
+                }
+                
+                if (e.data.type === 'SUCCESS_GUARDAR_MATRICULA') {
+                    alertify.success(this.accion === 'nuevo' ? "Matrícula registrada." : "Matrícula actualizada.");
+                    this.limpiarFormulario();
+                    this.$emit('buscar');
+                }
+                
+                if (e.data.type === 'ERROR') {
+                    alertify.error("Error al guardar: " + e.data.message);
+                }
+            };
         },
         modificarMatricula(datos) {
             this.accion = 'modificar';
             this.idMatricula = datos.idMatricula;
             this.matricula = { ...datos };
             
-            if(datos.idAlumno){
-                db.alumnos.get(datos.idAlumno).then(alumno => {
-                    if(alumno) {
-                        this.matricula.alumnoObj = {
-                            label: `${alumno.codigo} - ${alumno.nombre}`,
-                            id: alumno.idAlumno
-                        };
-                    }
-                });
+            // Como el buscador ahora usará SQL (JOIN), ya nos pasará el código y nombre
+            if(datos.idAlumno && datos.codigoAlumno && datos.nombreAlumno){
+                this.matricula.alumnoObj = {
+                    label: `${datos.codigoAlumno} - ${datos.nombreAlumno}`,
+                    id: datos.idAlumno
+                };
             }
         },
-        async guardarMatricula() {
+        guardarMatricula() {
             if (!this.matricula.alumnoObj || !this.matricula.alumnoObj.id) {
-                alert("Debe seleccionar un alumno.");
+                alertify.warning("Debe seleccionar un alumno.");
                 return;
             }
 
@@ -68,15 +81,7 @@ const matriculas = {
                 ciclo: this.matricula.ciclo
             };
 
-            try {
-                await db.matriculas.put(datos);
-                alert(this.accion === 'nuevo' ? "Matrícula registrada." : "Matrícula actualizada.");
-                this.limpiarFormulario();
-                this.buscarMatricula();
-            } catch (error) {
-                console.error(error);
-                alert("Error al guardar: " + error);
-            }
+            workerMatricula.postMessage({ type: 'GUARDAR_MATRICULA', data: datos });
         },
         limpiarFormulario() {
             this.accion = 'nuevo';
@@ -94,8 +99,9 @@ const matriculas = {
             <div class="col-md-8">
                 <form @submit.prevent="guardarMatricula" @reset.prevent="limpiarFormulario">
                     <div class="card card-custom">
-                        <div class="card-header-custom text-center">
-                            <i class="bi bi-credit-card-2-front me-2"></i> {{ accion === 'nuevo' ? 'REGISTRO DE MATRÍCULA' : 'EDITAR MATRÍCULA' }}
+                        <div class="card-header-custom d-flex justify-content-between align-items-center p-3">
+                            <span><i class="bi bi-credit-card-2-front me-2"></i> {{ accion === 'nuevo' ? 'REGISTRO DE MATRÍCULA' : 'EDITAR MATRÍCULA' }}</span>
+                            <button type="button" class="btn-close btn-close-white" @click="$emit('cerrar-todo')" aria-label="Close"></button>
                         </div>
                         <div class="card-body p-4">
                             <div class="row g-3">

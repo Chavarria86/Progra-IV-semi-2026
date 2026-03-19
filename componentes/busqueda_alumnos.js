@@ -1,3 +1,7 @@
+// componentes/busqueda_alumnos.js
+// Creamos la instancia del worker apuntando al mismo archivo
+const workerBusqueda = new Worker('/db/worker.js');
+
 const busqueda_alumnos = {
     data() {
         return {
@@ -9,28 +13,44 @@ const busqueda_alumnos = {
         modificarAlumno(alumno) {
             this.$emit('modificar', alumno);
         },
-        async obtenerAlumnos() {
-            try {
-                if (this.buscar.trim() === "") {
-                    this.alumnos = await db.alumnos.toArray();
-                } else {
-                    let texto = this.buscar.toLowerCase();
-                    this.alumnos = await db.alumnos.filter(alumno => 
-                        alumno.codigo.toLowerCase().includes(texto) || 
-                        alumno.nombre.toLowerCase().includes(texto)
-                    ).toArray();
+        obtenerAlumnos() {
+            // Enviamos el término de búsqueda al Worker
+            workerBusqueda.postMessage({ 
+                type: 'BUSCAR_ALUMNOS', 
+                data: { termino: this.buscar.trim() } 
+            });
+
+            // Escuchamos la respuesta
+            workerBusqueda.onmessage = (e) => {
+                if (e.data.type === 'RESULTADO_BUSQUEDA') {
+                    this.alumnos = e.data.data;
+                } else if (e.data.type === 'ERROR') {
+                    console.error("Error cargando alumnos desde SQLite:", e.data.message);
                 }
-            } catch (error) {
-                console.error("Error cargando alumnos: ", error);
-            }
+            };
         },
-        async eliminarAlumno(idAlumno, e) {
+        eliminarAlumno(idAlumno, e) {
             if(e) e.stopPropagation(); 
             
-            if (confirm("¿Está seguro de eliminar este registro permanentemente?")) {
-                await db.alumnos.delete(idAlumno);
-                this.obtenerAlumnos();
-            }
+            // Usamos alertify para mantener la consistencia con el diseño chill
+            alertify.confirm("Confirmar Eliminación", "¿Está seguro de eliminar este registro permanentemente?", 
+                () => { // Si el usuario dice que sí
+                    workerBusqueda.postMessage({ 
+                        type: 'ELIMINAR_ALUMNO', 
+                        data: { idAlumno: idAlumno } 
+                    });
+
+                    workerBusqueda.onmessage = (e) => {
+                        if (e.data.type === 'SUCCESS_ELIMINAR') {
+                            alertify.success('Registro eliminado');
+                            this.obtenerAlumnos(); // Refrescamos la tabla
+                        }
+                    };
+                },
+                () => { // Si el usuario cancela
+                    // No hacemos nada
+                }
+            );
         }
     },
     mounted() {
@@ -43,9 +63,12 @@ const busqueda_alumnos = {
                     <div class="card-header-custom d-flex justify-content-between align-items-center">
                         <span>LISTADO DE ALUMNOS</span>
                         
-                        <div class="input-group" style="max-width: 300px;">
-                            <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
-                            <input type="search" v-model="buscar" @keyup="obtenerAlumnos" class="form-control border-0 shadow-none" placeholder="Buscar...">
+                        <div class="d-flex align-items-center">
+                            <div class="input-group me-3" style="max-width: 300px;">
+                                <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
+                                <input type="search" v-model="buscar" @keyup="obtenerAlumnos" class="form-control border-0 shadow-none" placeholder="Buscar...">
+                            </div>
+                            <button type="button" class="btn-close btn-close-white" @click="$emit('cerrar-todo')" aria-label="Close"></button>
                         </div>
                     </div>
                     <div class="card-body p-0">

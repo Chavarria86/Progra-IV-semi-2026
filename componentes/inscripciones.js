@@ -1,3 +1,6 @@
+// componentes/inscripciones.js
+const workerInscripciones = new Worker('db/worker.js');
+
 const inscripciones = {
     props: ['forms'],
     components: {
@@ -19,74 +22,85 @@ const inscripciones = {
             idInscripcion: 0
         }
     },
-    // --- NUEVO BLOQUE: OBSERVADOR ---
     watch: {
         "forms.inscripciones.mostrar"(nuevoValor) {
             if (nuevoValor) {
-                this.cargarDatos(); // Recargar listas al abrir
+                this.cargarDatos(); 
             }
         }
     },
-    // --------------------------------
     methods: {
         buscarInscripcion() {
             this.forms.busqueda_inscripciones.mostrar = !this.forms.busqueda_inscripciones.mostrar;
             this.$emit('buscar');
         },
-        async cargarDatos() {
-            // Cargar Alumnos
-            let rawAlumnos = await db.alumnos.toArray();
-            this.listadoAlumnos = rawAlumnos.map(a => ({
-                label: `${a.codigo} - ${a.nombre}`,
-                id: a.idAlumno
-            }));
+        cargarDatos() {
+            // Pedimos los alumnos al worker
+            workerInscripciones.postMessage({ type: 'OBTENER_LISTA_ALUMNOS' });
+            // Pedimos las materias al worker
+            workerInscripciones.postMessage({ type: 'OBTENER_LISTA_MATERIAS' });
 
-            // Cargar Materias
-            let rawMaterias = await db.materias.toArray();
-            this.listadoMaterias = rawMaterias.map(m => ({
-                label: `${m.codigo} - ${m.nombre}`,
-                id: m.idMateria
-            }));
+            workerInscripciones.onmessage = (e) => {
+                if (e.data.type === 'RESULTADO_LISTA_ALUMNOS') {
+                    // Formateamos para v-select
+                    this.listadoAlumnos = e.data.data.map(a => ({
+                        label: `${a.codigo} - ${a.nombre}`, id: a.idAlumno
+                    }));
+                }
+                
+                if (e.data.type === 'RESULTADO_LISTA_MATERIAS') {
+                    // Formateamos para v-select
+                    this.listadoMaterias = e.data.data.map(m => ({
+                        label: `${m.codigo} - ${m.nombre}`, id: m.idMateria
+                    }));
+                }
+
+                if (e.data.type === 'RESULTADO_VALIDAR_MATRICULA') {
+                    // Aquí recibimos la respuesta de si el alumno está matriculado
+                    if (e.data.estaMatriculado) {
+                        this.ejecutarGuardado();
+                    } else {
+                        alertify.error("⛔ ERROR: Este alumno NO está matriculado.");
+                    }
+                }
+
+                if (e.data.type === 'SUCCESS_GUARDAR_INSCRIPCION') {
+                    alertify.success(this.accion === 'nuevo' ? "Materia inscrita correctamente." : "Inscripción actualizada.");
+                    this.limpiarFormulario();
+                    this.$emit('buscar');
+                }
+
+                if (e.data.type === 'ERROR') {
+                    alertify.error("Error: " + e.data.message);
+                }
+            };
         },
-        async guardarInscripcion() {
+        guardarInscripcion() {
             if (!this.inscripcion.alumnoObj || !this.inscripcion.alumnoObj.id) {
-                alert("Seleccione un alumno.");
+                alertify.warning("Seleccione un alumno.");
                 return;
             }
             if (!this.inscripcion.materiaObj || !this.inscripcion.materiaObj.id) {
-                alert("Seleccione una materia.");
+                alertify.warning("Seleccione una materia.");
                 return;
             }
 
             let alumnoId = this.inscripcion.alumnoObj.id;
 
-            // VALIDACIÓN: ¿ESTÁ MATRICULADO?
-            let estaMatriculado = await db.matriculas
-                .where("idAlumno")
-                .equals(alumnoId)
-                .count();
-
-            if (estaMatriculado === 0) {
-                alert("⛔ ERROR: Este alumno NO está matriculado. No puede inscribir materias.");
-                return; 
-            }
-
+            // Antes de guardar, le pedimos al Worker que valide si el alumno está matriculado
+            // La respuesta se manejará en el onmessage (RESULTADO_VALIDAR_MATRICULA)
+            workerInscripciones.postMessage({ type: 'VALIDAR_MATRICULA', data: { idAlumno: alumnoId } });
+        },
+        ejecutarGuardado() {
+            // Esta función se llama SOLO si el Worker confirmó que sí hay matrícula
             let datos = {
                 idInscripcion: this.accion == 'modificar' ? this.idInscripcion : new Date().getTime(),
-                idAlumno: alumnoId,
+                idAlumno: this.inscripcion.alumnoObj.id,
                 idMateria: this.inscripcion.materiaObj.id,
                 fecha: this.inscripcion.fecha
             };
 
-            try {
-                await db.inscripciones.put(datos);
-                alert("Materia inscrita correctamente.");
-                this.limpiarFormulario();
-                this.buscarInscripcion();
-            } catch (error) {
-                console.error(error);
-                alert("Error al guardar: " + error);
-            }
+            workerInscripciones.postMessage({ type: 'GUARDAR_INSCRIPCION', data: datos });
         },
         limpiarFormulario() {
             this.accion = 'nuevo';
@@ -104,8 +118,9 @@ const inscripciones = {
             <div class="col-md-8">
                 <form @submit.prevent="guardarInscripcion" @reset.prevent="limpiarFormulario">
                     <div class="card card-custom">
-                        <div class="card-header-custom text-center">
-                            <i class="bi bi-journal-check me-2"></i> {{ accion === 'nuevo' ? 'INSCRIPCIÓN DE MATERIAS' : 'EDITAR INSCRIPCIÓN' }}
+                        <div class="card-header-custom d-flex justify-content-between align-items-center p-3">
+                            <span><i class="bi bi-journal-check me-2"></i> {{ accion === 'nuevo' ? 'INSCRIPCIÓN DE MATERIAS' : 'EDITAR INSCRIPCIÓN' }}</span>
+                            <button type="button" class="btn-close btn-close-white" @click="$emit('cerrar-todo')" aria-label="Close"></button>
                         </div>
                         <div class="card-body p-4">
                             <div class="row g-3">
