@@ -53,7 +53,7 @@ const docentes = {
             // 3. Escuchar respuesta
             workerDocente.onmessage = (e) => {
                 console.log("Respuesta recibida del Worker:", e.data);
-                if (e.data.type === 'SUCCESS') {
+                if (e.data.type === 'SUCCESS_DOCENTE') {
                     alertify.success(`${datos.nombre} guardado correctamente`);
                     this.limpiarFormulario();
                     this.$emit('buscar'); 

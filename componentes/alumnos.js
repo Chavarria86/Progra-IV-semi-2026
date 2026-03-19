@@ -33,7 +33,7 @@ const alumnos = {
             worker.onmessage = (e) => {
                 console.log("3. El Worker respondió:", e.data);
                 
-                if (e.data.type === 'SUCCESS') {
+                if (e.data.type === 'SUCCESS_ALUMNO') {
                     // Plan B: Si Alertify falló por la ruta, usamos el alert normal para no congelar
                     if (typeof alertify !== 'undefined') {
                         alertify.success(this.accion === 'nuevo' ? "Alumno registrado." : "Alumno actualizado.");

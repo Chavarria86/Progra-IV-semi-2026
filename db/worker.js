@@ -87,7 +87,7 @@ self.onmessage = async (e) => {
                 bind: [data.idAlumno, data.codigo, data.nombre, data.direccion, data.municipio, 
                        data.departamento, data.email, data.telefono, data.fechaNac, data.sexo]
             });
-            self.postMessage({ type: 'SUCCESS' });
+            self.postMessage({ type: 'SUCCESS_ALUMNO' });
         }
         
         if (type === 'BUSCAR_ALUMNOS') {
@@ -125,7 +125,7 @@ self.onmessage = async (e) => {
                 sql: `INSERT OR REPLACE INTO materias VALUES (?,?,?,?)`,
                 bind: [data.idMateria, data.codigo, data.nombre, data.uv]
             });
-            self.postMessage({ type: 'SUCCESS' });
+            self.postMessage({ type: 'SUCCESS_MATERIA' });
         }
 
         if (type === 'BUSCAR_MATERIAS') {
@@ -159,7 +159,7 @@ self.onmessage = async (e) => {
                 sql: `INSERT OR REPLACE INTO docentes VALUES (?,?,?,?,?,?,?)`,
                 bind: [data.idDocente, data.codigo, data.nombre, data.direccion, data.email, data.telefono, data.escalafon]
             });
-            self.postMessage({ type: 'SUCCESS' });
+            self.postMessage({ type: 'SUCCESS_DOCENTE' });
         }
 
         if (type === 'BUSCAR_DOCENTES') {

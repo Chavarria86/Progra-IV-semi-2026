@@ -27,7 +27,7 @@ const materias = {
             workerMateria.postMessage({ type: 'GUARDAR_MATERIA', data: datos });
 
             workerMateria.onmessage = (e) => {
-                if (e.data.type === 'SUCCESS') {
+                if (e.data.type === 'SUCCESS_MATERIA') {
                     alertify.success(this.accion === 'nuevo' ? "Materia registrada." : "Materia actualizada.");
                     this.limpiarFormulario();
                     this.$emit('buscar'); 
