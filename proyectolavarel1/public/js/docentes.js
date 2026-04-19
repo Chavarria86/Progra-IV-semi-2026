@@ -72,14 +72,15 @@ const docentes = {
                 let data = await response.json();
                 
                 if(!response.ok) {
-                    if(typeof alertify !== 'undefined') alertify.error(`Error del servidor`);
+                    let errorMsg = data.message || 'Error al guardar el docente';
+                    if(typeof alertify !== 'undefined') alertify.error(errorMsg);
                 } else {
                     if(typeof alertify !== 'undefined') alertify.success(`${datos.nombre} guardado exitosamente`);
                     this.limpiarFormulario();
                     this.obtenerDocentes();
                 }
             } catch(e) {
-                if(typeof alertify !== 'undefined') alertify.error('Error de API');
+                if(typeof alertify !== 'undefined') alertify.error('Error de conexión con el servidor');
             }
         },
         async obtenerDocentes() {
@@ -135,11 +136,21 @@ const docentes = {
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold">ESCALAFÓN:</label>
-                                    <input required v-model="docente.escalafon" type="text" class="form-control">
+                                    <select required v-model="docente.escalafon" class="form-select">
+                                        <option value="" disabled selected>-- Seleccione Escalafón --</option>
+                                        <option value="tecnico">Técnico</option>
+                                        <option value="profesor">Profesor</option>
+                                        <option value="ingeniero">Licenciado/Ingeniero</option>
+                                        <option value="maestria">Maestría</option>
+                                        <option value="doctor">Doctor</option>
+                                    </select>
                                 </div>
                             </div>
                             <hr class="my-4">
-                            <button type="submit" class="btn btn-success w-100 fw-bold">{{ accion === 'nuevo' ? 'GUARDAR' : 'ACTUALIZAR' }} DOCENTE</button>
+                            <button type="submit" class="btn btn-success w-100 fw-bold py-2">
+                                <i class="fa-solid fa-floppy-disk me-2"></i>
+                                {{ accion === 'nuevo' ? 'GUARDAR' : 'ACTUALIZAR' }} DOCENTE
+                            </button>
                         </form>
                     </div>
                 </div>
