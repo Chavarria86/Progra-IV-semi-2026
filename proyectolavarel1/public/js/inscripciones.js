@@ -10,13 +10,33 @@ const inscripciones = {
             accion:'nuevo',
             idInscripcion:0,
             data_inscripciones:[],
+            lista_alumnos: [],
+            lista_materias: [],
             busqueda: ''
         }
     },
     mounted() {
         this.obtenerInscripciones();
+        this.obtenerAlumnos();
+        this.obtenerMaterias();
     },
     methods:{
+        async obtenerAlumnos() {
+            try {
+                let response = await fetch('/api/alumnos');
+                if(response.ok) {
+                    this.lista_alumnos = await response.json();
+                }
+            } catch(e) {}
+        },
+        async obtenerMaterias() {
+            try {
+                let response = await fetch('/api/materias');
+                if(response.ok) {
+                    this.lista_materias = await response.json();
+                }
+            } catch(e) {}
+        },
         buscarInscripcion(){
             this.obtenerInscripciones();
         },
@@ -91,6 +111,14 @@ const inscripciones = {
                 }
             } catch(e) { }
         },
+        getNombreAlumno(uuid) {
+            let alu = this.lista_alumnos.find(a => a.idAlumno === uuid);
+            return alu ? alu.nombre : uuid;
+        },
+        getNombreMateria(uuid) {
+            let mat = this.lista_materias.find(m => m.idMateria === uuid);
+            return mat ? mat.nombre : uuid;
+        },
         limpiarFormulario(){
             this.accion = 'nuevo';
             this.idInscripcion = 0;
@@ -114,17 +142,27 @@ const inscripciones = {
                             <div class="row g-3">
                                 
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">ID ALUMNO (UUID):</label>
-                                    <input placeholder="Añade el UUID del alumno" required v-model="inscripcion.idAlumno" type="text" class="form-control">
+                                    <label class="form-label fw-bold">SELECCIONAR ALUMNO:</label>
+                                    <select required v-model="inscripcion.idAlumno" class="form-select">
+                                        <option value="" disabled selected>-- Elige un Alumno --</option>
+                                        <option v-for="al in lista_alumnos" :value="al.idAlumno">
+                                            {{ al.codigo }} - {{ al.nombre }}
+                                        </option>
+                                    </select>
                                 </div>
                                 
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">ID MATERIA (UUID):</label>
-                                    <input placeholder="Añade el UUID de la materia" required v-model="inscripcion.idMateria" type="text" class="form-control">
+                                    <label class="form-label fw-bold">SELECCIONAR MATERIA:</label>
+                                    <select required v-model="inscripcion.idMateria" class="form-select">
+                                        <option value="" disabled selected>-- Elige una Materia --</option>
+                                        <option v-for="mat in lista_materias" :value="mat.idMateria">
+                                            {{ mat.codigo }} - {{ mat.nombre }}
+                                        </option>
+                                    </select>
                                 </div>
                                 
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold">FECHA:</label>
+                                    <label class="form-label fw-bold">FECHA DE INSCRIPCIÓN:</label>
                                     <input required v-model="inscripcion.fecha" type="date" class="form-control">
                                 </div>
                                 
@@ -147,7 +185,7 @@ const inscripciones = {
                     <div class="card-body">
                         <div class="input-group mb-4">
                             <span class="input-group-text bg-light">🔍</span>
-                            <input placeholder="Buscar inscripciones..." v-model="busqueda" @keyup="buscarInscripcion" type="text" class="form-control">
+                            <input placeholder="Buscar ID de alumno o materia..." v-model="busqueda" @keyup="buscarInscripcion" type="text" class="form-control">
                             <button type="button" @click="buscarInscripcion" class="btn btn-secondary px-4">Buscar</button>
                         </div>
 
@@ -156,8 +194,8 @@ const inscripciones = {
                                 <thead class="table-light">
                                     <tr>
                                         <th>ID</th>
-                                        <th>ID ALUMNO</th>
-                                        <th>ID MATERIA</th>
+                                        <th>ALUMNO</th>
+                                        <th>MATERIA</th>
                                         <th>FECHA</th>
                                         <th class="text-center">ACCIONES</th>
                                     </tr>
@@ -165,8 +203,8 @@ const inscripciones = {
                                 <tbody>
                                     <tr v-for="ins in data_inscripciones" :key="ins.idInscripcion" :class="idInscripcion === ins.idInscripcion ? 'table-primary' : ''">
                                         <td><strong>{{ ins.idInscripcion }}</strong></td>
-                                        <td style="font-size: 0.8rem" class="text-muted">{{ ins.idAlumno }}</td>
-                                        <td style="font-size: 0.8rem" class="text-muted">{{ ins.idMateria }}</td>
+                                        <td>{{ getNombreAlumno(ins.idAlumno) }} <br><small class="text-muted" style="font-size:0.7em">{{ins.idAlumno}}</small></td>
+                                        <td>{{ getNombreMateria(ins.idMateria) }} <br><small class="text-muted" style="font-size:0.7em">{{ins.idMateria}}</small></td>
                                         <td>{{ ins.fecha }}</td>
                                         <td class="text-center">
                                             <button @click="modificarInscripcion(ins)" class="btn btn-sm btn-outline-primary me-2">✎</button>
