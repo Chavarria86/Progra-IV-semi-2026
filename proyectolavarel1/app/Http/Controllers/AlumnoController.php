@@ -44,8 +44,8 @@ class AlumnoController extends Controller
             'idAlumno' => 'required',
             'codigo' => 'required|max:20',
             'nombre' => 'required|max:100',
-            'direccion' => 'nullable|max:150',
-            'telefono' => 'nullable|max:15',
+            'direccion' => 'required|max:150',
+            'telefono' => 'required|max:10',
             'email' => 'required|email|max:255'
         ]);
 
@@ -82,8 +82,8 @@ class AlumnoController extends Controller
         $validatedData = $request->validate([
             'codigo' => 'required|max:20',
             'nombre' => 'required|max:100',
-            'direccion' => 'nullable|max:150',
-            'telefono' => 'nullable|max:15',
+            'direccion' => 'required|max:150',
+            'telefono' => 'required|max:10',
             'email' => 'required|email|max:255'
         ]);
 

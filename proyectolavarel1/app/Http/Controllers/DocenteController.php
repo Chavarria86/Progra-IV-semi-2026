@@ -33,10 +33,10 @@ class DocenteController extends Controller
             'Id_Docentes' => 'required',
             'codigo' => 'required|max:20',
             'nombre' => 'required|max:100',
-            'direccion' => 'nullable|max:150',
-            'telefono' => 'nullable|max:15',
+            'direccion' => 'required|max:150',
+            'telefono' => 'required|max:10',
             'email' => 'required|email',
-            'escalafon' => 'nullable|max:50'
+            'escalafon' => 'required|max:50'
         ]);
 
         $docente = Docente::create($validatedData);
@@ -51,10 +51,10 @@ class DocenteController extends Controller
         $validatedData = $request->validate([
             'codigo' => 'required|max:20',
             'nombre' => 'required|max:100',
-            'direccion' => 'nullable|max:150',
-            'telefono' => 'nullable|max:15',
+            'direccion' => 'required|max:150',
+            'telefono' => 'required|max:10',
             'email' => 'required|email',
-            'escalafon' => 'nullable|max:50'
+            'escalafon' => 'required|max:50'
         ]);
 
         $docente->update($validatedData);

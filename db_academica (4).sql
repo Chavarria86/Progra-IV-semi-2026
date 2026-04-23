@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 22-04-2026 a las 23:02:49
+-- Tiempo de generación: 23-04-2026 a las 06:52:50
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -68,9 +68,9 @@ CREATE TABLE `docentes` (
 --
 
 INSERT INTO `docentes` (`id`, `Id_Docentes`, `codigo`, `nombre`, `direccion`, `telefono`, `email`, `escalafon`) VALUES
-(1, '36f039b4-7c61-4203-858b-9dda84e28fba', 'Usis44', 'luis', 'batres', '78787878', 'josechavarria241073@gmail.com', 'ingeniero'),
-(3, 'fc9aae4b-f4ec-4c52-9b7a-38df5770fe83', 'usus24', 'torres', 'usu', '4265-1425', 'torres@gmail.com', 'ingeniero'),
-(12, 'f31a43ae-2ec8-422f-9c42-061f0d3c9ad0', 'USIS02444', 'Luis hernandez', 'El transito', '5477-5987', 'luis@ugb.edu.sv', 'ingeniero');
+(3, 'fc9aae4b-f4ec-4c52-9b7a-38df5770fe83', 'usus24', 'torres', 'usu', '4265-1425', 'torres@gmail.com', 'Licenciatura'),
+(16, 'a9d7481f-90de-4fb2-8e0f-5d85c4be5850', 'USIS027741', 'OSMARO', 'USULUTAN', '0114-6987', 'OSMARO@UGB.EDU.SV', 'Ingeniería'),
+(12, 'f31a43ae-2ec8-422f-9c42-061f0d3c9ad0', 'USIS02444', 'Luis hernandez', 'El transito', '5477-5987', 'luis@ugb.edu.sv', 'Licenciatura');
 
 -- --------------------------------------------------------
 
@@ -90,6 +90,7 @@ CREATE TABLE `inscripciones` (
 --
 
 INSERT INTO `inscripciones` (`idInscripcion`, `idAlumno`, `idMateria`, `fecha`) VALUES
+(8, '394c9531-8a89-45da-a93d-94f3362a5d64', 'ea5abfa3-3fe9-47f3-a131-83f625d9e168', '2026-04-23'),
 (7, 'ca9bfad3-57f1-496f-b865-3204c082c566', '069d1211-cac7-4b75-993e-4b436b30f9ea', '2026-04-18');
 
 -- --------------------------------------------------------
@@ -113,7 +114,8 @@ CREATE TABLE `materias` (
 INSERT INTO `materias` (`id`, `idMateria`, `codigo`, `nombre`, `uv`) VALUES
 (1, 'b3ab4561-131e-4170-8508-3ba613dd8329', '410', 'redes', '4'),
 (2, '1657d5de-b9ad-46bb-b8d8-2e528e6adf5e', 'MAT001', 'Programacion IV', '4'),
-(3, '069d1211-cac7-4b75-993e-4b436b30f9ea', 'MAT01', 'Programacion IV', '4');
+(3, '069d1211-cac7-4b75-993e-4b436b30f9ea', 'MAT01', 'Programacion IV', '4'),
+(6, 'ea5abfa3-3fe9-47f3-a131-83f625d9e168', 'MT-001', 'Programacion IV', '4');
 
 -- --------------------------------------------------------
 
@@ -138,8 +140,9 @@ CREATE TABLE `matriculas` (
 --
 
 INSERT INTO `matriculas` (`id`, `idMatricula`, `idAlumno`, `idMateria`, `idDocente`, `fecha`, `estado`, `periodo`, `gestion`) VALUES
-(9, 'ec5f8c12-7789-4bb2-a56f-77e6e3cae868', '394c9531-8a89-45da-a93d-94f3362a5d64', 'b3ab4561-131e-4170-8508-3ba613dd8329', 'fc9aae4b-f4ec-4c52-9b7a-38df5770fe83', '2026-03-25', 'INACTIVO', 'Ciclo I', 2026),
-(15, '5f71cdef-de6c-461b-bdc5-b589e4e96b42', '394c9531-8a89-45da-a93d-94f3362a5d64', 'b3ab4561-131e-4170-8508-3ba613dd8329', 'f31a43ae-2ec8-422f-9c42-061f0d3c9ad0', '2026-04-21', 'activo', 'CICLO I', 2026);
+(9, 'ec5f8c12-7789-4bb2-a56f-77e6e3cae868', '394c9531-8a89-45da-a93d-94f3362a5d64', 'b3ab4561-131e-4170-8508-3ba613dd8329', 'fc9aae4b-f4ec-4c52-9b7a-38df5770fe83', '2026-03-25', 'Inactivo', 'Ciclo I', 2026),
+(16, '0ff54872-312c-4ba4-9675-8dc2887589e4', 'ca9bfad3-57f1-496f-b865-3204c082c566', 'ea5abfa3-3fe9-47f3-a131-83f625d9e168', 'a9d7481f-90de-4fb2-8e0f-5d85c4be5850', '2026-04-23', 'Activo', 'ciclo i', 2026),
+(15, '5f71cdef-de6c-461b-bdc5-b589e4e96b42', '394c9531-8a89-45da-a93d-94f3362a5d64', 'b3ab4561-131e-4170-8508-3ba613dd8329', 'f31a43ae-2ec8-422f-9c42-061f0d3c9ad0', '2026-04-21', 'Activo', 'CICLO I', 2026);
 
 --
 -- Índices para tablas volcadas
@@ -183,31 +186,31 @@ ALTER TABLE `matriculas`
 -- AUTO_INCREMENT de la tabla `alumnos`
 --
 ALTER TABLE `alumnos`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT de la tabla `docentes`
 --
 ALTER TABLE `docentes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT de la tabla `inscripciones`
 --
 ALTER TABLE `inscripciones`
-  MODIFY `idInscripcion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `idInscripcion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT de la tabla `materias`
 --
 ALTER TABLE `materias`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de la tabla `matriculas`
 --
 ALTER TABLE `matriculas`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
