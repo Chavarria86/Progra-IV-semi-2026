@@ -13,10 +13,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     }
 
+    if (!preg_match('/^[a-zA-Z0-9._%+-]+@ugb\.edu\.sv$/i', $email)) {
+        echo json_encode(['success' => false, 'message' => 'El correo debe ser institucional (ejemplo: usss000000@ugb.edu.sv).']);
+        exit;
+    }
+
     try {
         // 1. Check if the student actually exists in the `estudiante` table.
-        // We assume they must use their institutional email which is stored in `correo_principal`.
-        $stmtEstudiante = $pdo->prepare("SELECT id FROM estudiante WHERE correo_principal = ?");
+        // We assume they must use their institutional email which is stored in `correo_secundario`.
+        $stmtEstudiante = $pdo->prepare("SELECT id FROM estudiante WHERE correo_secundario = ?");
         $stmtEstudiante->execute([$email]);
         $estudianteExiste = $stmtEstudiante->fetch();
 

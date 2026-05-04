@@ -108,9 +108,24 @@ export function setupRegister(switchView) {
     });
     regConfirmPassword.addEventListener('input', validateConfirmPassword);
     
+    const validateEmail = () => {
+        const emailVal = regEmail.value.trim();
+        if (!emailVal) {
+            showError('reg-email', 'El correo institucional es obligatorio.');
+            return false;
+        }
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@ugb\.edu\.sv$/i;
+        if (!emailRegex.test(emailVal)) {
+            showError('reg-email', 'Debe ser un correo institucional válido.');
+            return false;
+        }
+        clearError('reg-email');
+        return true;
+    };
+
     regNombres.addEventListener('input', () => checkRequired(regNombres, 'reg-nombres', 'Nombres'));
     regApellidos.addEventListener('input', () => checkRequired(regApellidos, 'reg-apellidos', 'Apellidos'));
-    regEmail.addEventListener('input', () => checkRequired(regEmail, 'reg-email', 'Correo institucional'));
+    regEmail.addEventListener('input', validateEmail);
     regTerms.addEventListener('change', () => {
         if (!regTerms.checked) {
             showError('reg-terms', 'Debes aceptar los términos y condiciones.');
@@ -126,12 +141,13 @@ export function setupRegister(switchView) {
         // Force evaluation of all fields
         const v1 = checkRequired(regNombres, 'reg-nombres', 'Nombres');
         const v2 = checkRequired(regApellidos, 'reg-apellidos', 'Apellidos');
-        const v4 = checkRequired(regEmail, 'reg-email', 'Correo institucional');
+        const v4 = validateEmail();
         const v5 = validatePasswordComplexity();
         const v6 = validateConfirmPassword();
         let v7 = true;
         if (!regTerms.checked) {
             showError('reg-terms', 'Debes aceptar los términos y condiciones.');
+            alertify.warning('Para continuar, debes aceptar los términos y condiciones.');
             v7 = false;
         }
 
