@@ -19,16 +19,48 @@ Route::prefix('api')->group(function () {
     Route::prefix('pasante')->group(function () {
         Route::get('/perfil', [PasanteController::class, 'getPerfil']);
         Route::post('/cv', [PasanteController::class, 'subirCV']);
+        Route::get('/cvs', [PasanteController::class, 'getMisCvs']);
+        Route::get('/informes', [PasanteController::class, 'getInformes']);
         Route::post('/informes', [PasanteController::class, 'subirInforme']);
+        Route::put('/informes/{id}', [PasanteController::class, 'actualizarInforme']);
+        Route::delete('/informes/{id}', [PasanteController::class, 'eliminarInforme']);
         Route::get('/vacantes', [PasanteController::class, 'getVacantes']);
+        Route::post('/vacantes/{id}/aplicar', [PasanteController::class, 'aplicarVacante']);
+        Route::get('/postulaciones', [PasanteController::class, 'getPostulaciones']);
+        Route::post('/solicitar-supervisor', [PasanteController::class, 'solicitarSupervisor']);
+        Route::get('/mi-supervisor', [PasanteController::class, 'getMiSupervisor']);
     });
 
     // Rutas de Supervisor
     Route::prefix('supervisor')->group(function () {
-        Route::get('/pasantes', [SupervisorController::class, 'getPasantes']);
+        Route::get('/dashboard', [SupervisorController::class, 'getDashboard']);
+        // Pasantes
+        Route::get('/pasantes', [SupervisorController::class, 'getMisPasantes']);
+        Route::post('/asignar', [SupervisorController::class, 'asignarPasante']);
+        
+        // CVs
+        Route::get('/cvs-pendientes', [SupervisorController::class, 'getCvsPendientes']);
         Route::put('/cvs/{id}/validar', [SupervisorController::class, 'validarCV']);
         Route::put('/cvs/{id}/rechazar', [SupervisorController::class, 'rechazarCV']);
-        Route::post('/asignar', [SupervisorController::class, 'asignarPasante']);
+        
+        // Informes
+        Route::get('/informes', [SupervisorController::class, 'getInformesPendientes']);
+        Route::put('/informes/{id}/evaluar', [SupervisorController::class, 'evaluarInforme']);
+
+        // Solicitudes de Asignación de Pasante
+        Route::get('/solicitudes', [SupervisorController::class, 'getSolicitudes']);
+        Route::put('/solicitudes/{id}/responder', [SupervisorController::class, 'responderSolicitud']);
+
+        // Postulaciones a Vacantes
+        Route::get('/postulaciones', [SupervisorController::class, 'getPostulaciones']);
+        Route::put('/postulaciones/{id}/responder', [SupervisorController::class, 'responderPostulacion']);
+
+        // Vacantes (Deshabilitado: solo el Vicedecano crea vacantes)
+        // Route::post('/vacantes', [SupervisorController::class, 'crearVacante']);
+
+        // Recomendaciones
+        Route::get('/recomendaciones', [SupervisorController::class, 'getRecomendaciones']);
+        Route::post('/recomendaciones', [SupervisorController::class, 'crearRecomendacion']);
     });
 
     // Rutas de Vice Decano
@@ -36,15 +68,18 @@ Route::prefix('api')->group(function () {
         Route::get('/dashboard', [ViceDecanoController::class, 'getDashboard']);
         Route::get('/informes/finales', [ViceDecanoController::class, 'getInformesFinales']);
         Route::put('/informes/{id}/evaluar', [ViceDecanoController::class, 'evaluarInforme']);
+        Route::post('/vacantes', [ViceDecanoController::class, 'crearVacante']);
+        Route::get('/asignaciones-data', [ViceDecanoController::class, 'getAsignacionesData']);
+        Route::post('/asignar-supervisor', [ViceDecanoController::class, 'asignarSupervisor']);
     });
 
     // ── Rutas de Curriculum Vitae ──────────────────────────────────────────────
     // Guardar / actualizar CV (solo el propio usuario lo hace desde el wizard)
     Route::post('/cv/guardar', [CvController::class, 'guardar']);
-    // Obtener CV de un usuario específico
+    // Obtener todos los CVs de un usuario específico
     Route::get('/cv/{usuarioId}', [CvController::class, 'obtener']);
-    // Eliminar CV de un usuario
-    Route::delete('/cv/{usuarioId}', [CvController::class, 'eliminar']);
+    // Eliminar un CV específico por su cv ID
+    Route::delete('/cv/{cvId}', [CvController::class, 'eliminar']);
 });
 
 // Ruta para la vista de login (Blade) - Si prefieren usar blade en vez de Vue
@@ -56,6 +91,15 @@ Route::get('/login', function () {
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Ruta de respaldo (Fallback) para servir archivos de almacenamiento público en entornos con problemas de enlaces simbólicos (ej. OneDrive)
+Route::get('/storage/{path}', function ($path) {
+    $filePath = storage_path("app/public/{$path}");
+    if (file_exists($filePath)) {
+        return response()->file($filePath);
+    }
+    abort(404);
+})->where('path', '.*');
 
 // Ruta "Catch-all" para la aplicación Vue (Dashboards)
 Route::get('/dashboard/{any}', function () {

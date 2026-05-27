@@ -155,8 +155,8 @@
         </div>
         <div class="d-flex gap-4">
             <!-- Redirección con parámetro ?vista=registro para abrir directamente el formulario de registro -->
-            <a href="login.html?vista=registro" class="btn-genesis btn-primario">Registrarse</a>
-            <a href="login.html" class="btn-genesis btn-primario">Iniciar sesión</a>
+            <a href="/login?vista=registro" class="btn-genesis btn-primario">Registrarse</a>
+            <a href="/login" class="btn-genesis btn-primario">Iniciar sesión</a>
         </div>
     </nav>
 

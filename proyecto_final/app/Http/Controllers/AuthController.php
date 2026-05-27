@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Mail\CodigoRecuperacionMail;
+use App\Models\Usuario;
+use App\Models\PersonalAdministrativo;
+use App\Models\Estudiante;
+use App\Models\RecuperacionCodigo;
+use App\Models\Pasante;
 
 class AuthController extends Controller
 {
@@ -24,8 +28,8 @@ class AuthController extends Controller
         $usuario = null;
         $rol = null;
 
-        // 1. Buscar en tabla usuarios (Pasantes)
-        $usuarioDb = DB::table('usuarios')->where('correo_institucional', $correo)->first();
+        // 1. Buscar en tabla usuarios (Tabla principal unificada)
+        $usuarioDb = Usuario::where('correo_institucional', $correo)->first();
 
         if ($usuarioDb && Hash::check($contrasena, $usuarioDb->password)) {
             $usuario = [
@@ -34,17 +38,17 @@ class AuthController extends Controller
                 'apellidos' => $usuarioDb->apellidos,
                 'correo' => $usuarioDb->correo_institucional
             ];
-            $rol = 'pasante';
+            $rol = $usuarioDb->rol; // Leer el rol directo de la BD
 
-            // Regla: Si es pasante, su correo debe empezar con "usss"
-            if (!Str::startsWith(strtolower($correo), 'usss')) {
-                return response()->json(['mensaje' => 'El correo de pasante debe iniciar con "usss".'], 400);
+            // Regla: Si el rol es pasante, su correo debe empezar con "us"
+            if ($rol === 'pasante' && !Str::startsWith(strtolower($correo), 'us')) {
+                return response()->json(['mensaje' => 'El correo de pasante debe iniciar con "us".'], 400);
             }
         }
 
-        // 2. Buscar en tabla personal_administrativo (Supervisores / Vice Decano)
+        // 2. Buscar en tabla personal_administrativo (Si no está en usuarios, caso heredado/alterno)
         if (!$usuario) {
-            $personalDb = DB::table('personal_administrativo')->where('correo_institucional', $correo)->first();
+            $personalDb = PersonalAdministrativo::where('correo_institucional', $correo)->first();
 
             if ($personalDb && Hash::check($contrasena, $personalDb->password)) {
                 $usuario = [
@@ -76,8 +80,6 @@ class AuthController extends Controller
             'vice_decano' => '/dashboard/vicedecano'
         ];
 
-        // Usamos una sesión nativa de Laravel para mantener estado (SPA Authentication con Sanctum o session)
-        // Por simplicidad, devolveremos los datos para que Vue los maneje en localStorage.
         return response()->json([
             'mensaje' => 'Inicio de sesión exitoso.',
             'usuario' => $usuario,
@@ -94,45 +96,85 @@ class AuthController extends Controller
 
         $correo = strtolower($request->correo);
 
-        if (!Str::startsWith($correo, 'usss')) {
-            return response()->json(['mensaje' => 'El correo de pasante debe iniciar con "usss".'], 400);
+        // Si el correo empieza con "us" se trata de un Estudiante/Pasante
+        if (Str::startsWith($correo, 'us')) {
+            // 1. Validar que el estudiante exista en la base de datos institucional (usando el correo secundario)
+            $estudiante = Estudiante::where('correo_secundario', $correo)->first();
+            
+            if (!$estudiante) {
+                return response()->json(['mensaje' => 'Este correo no pertenece a un estudiante activo matriculado.'], 400);
+            }
+
+            // 2. Verificar si ya se le creó una cuenta en la tabla 'usuarios'
+            $existe = Usuario::where('correo_institucional', $correo)->exists();
+            if ($existe) {
+                return response()->json(['mensaje' => 'Esta cuenta ya está registrada. Por favor inicia sesión.'], 400);
+            }
+
+            // 3. Insertar usuario usando los nombres oficiales de la base de datos de estudiantes
+            $usuario = Usuario::create([
+                'nombres' => $estudiante->nombre,
+                'apellidos' => $estudiante->apellido,
+                'correo_institucional' => $correo,
+                'password' => Hash::make($request->contrasena),
+                'estado' => 'activo',
+                'rol' => 'pasante',
+                'fecha_registro' => now()
+            ]);
+
+            // 4. Crear registro asociado en la tabla pasantes automáticamente
+            Pasante::create([
+                'usuario_id' => $usuario->id,
+                'area' => $estudiante->carrera, // Podemos guardar la carrera como el área inicial
+                'tipo_pasantia' => 'Por definir',
+                'estado' => 'en_proceso',
+                'fase_actual' => 'Pendiente',
+            ]);
+
+            return response()->json(['mensaje' => 'Cuenta de pasante verificada y creada con éxito. Ahora puedes iniciar sesión.']);
+        } else {
+            // Se trata de Personal Administrativo (Supervisor o Vicedecano)
+            // 1. Verificar si ya existe en usuarios o personal_administrativo
+            $existeUser = Usuario::where('correo_institucional', $correo)->exists();
+            $existeAdmin = PersonalAdministrativo::where('correo_institucional', $correo)->exists();
+            if ($existeUser || $existeAdmin) {
+                return response()->json(['mensaje' => 'Esta cuenta administrativa ya está registrada. Por favor inicia sesión.'], 400);
+            }
+
+            // 2. Determinar rol y cargo
+            $cargo = 'supervisor';
+            $rol = 'supervisor';
+            if (str_contains($correo, 'decano') || str_contains($correo, 'vicedecano')) {
+                $cargo = 'vice_decano';
+                $rol = 'vice_decano';
+            }
+
+            // Usar nombres provistos en el request (o valores por defecto si no vienen)
+            $nombres = $request->input('nombres', 'Personal');
+            $apellidos = $request->input('apellidos', 'Administrativo');
+
+            // 3. Crear en tabla usuarios (tabla de login unificada)
+            $usuario = Usuario::create([
+                'nombres' => $nombres,
+                'apellidos' => $apellidos,
+                'correo_institucional' => $correo,
+                'password' => Hash::make($request->contrasena),
+                'estado' => 'activo',
+                'rol' => $rol,
+                'fecha_registro' => now()
+            ]);
+
+            // 4. Crear en tabla personal_administrativo (tabla de supervisores/decanos institucional)
+            PersonalAdministrativo::create([
+                'nombres' => $nombres,
+                'apellidos' => $apellidos,
+                'correo_institucional' => $correo,
+                'password' => Hash::make($request->contrasena),
+                'cargo' => $cargo,
+            ]);
+
+            return response()->json(['mensaje' => 'Cuenta de personal administrativo creada con éxito. Ahora puedes iniciar sesión.']);
         }
-
-        // 1. Validar que el estudiante exista en la base de datos institucional (usando el correo secundario)
-        $estudiante = DB::table('estudiante')->where('correo_secundario', $correo)->first();
-        
-        if (!$estudiante) {
-            return response()->json(['mensaje' => 'Este correo no pertenece a un estudiante activo matriculado.'], 400);
-        }
-
-        // 2. Verificar si ya se le creó una cuenta en la tabla 'usuarios'
-        $existe = DB::table('usuarios')->where('correo_institucional', $correo)->exists();
-        if ($existe) {
-            return response()->json(['mensaje' => 'Esta cuenta ya está registrada. Por favor inicia sesión.'], 400);
-        }
-
-        // 3. Insertar usuario usando los nombres oficiales de la base de datos de estudiantes
-        $usuarioId = DB::table('usuarios')->insertGetId([
-            'nombres' => $estudiante->nombre,
-            'apellidos' => $estudiante->apellido,
-            'correo_institucional' => $correo,
-            'password' => Hash::make($request->contrasena),
-            'estado' => 1,
-            'fecha_registro' => now()
-        ]);
-
-        // 4. Crear registro asociado en la tabla pasantes automáticamente
-        DB::table('pasantes')->insert([
-            'usuario_id' => $usuarioId,
-            'area' => $estudiante->carrera, // Podemos guardar la carrera como el área inicial
-            'tipo_pasantia' => 'Por definir',
-            'estado' => 'en_proceso',
-            'fase_actual' => 'Pendiente',
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
-
-        return response()->json(['mensaje' => 'Cuenta verificada y creada con éxito. Ahora puedes iniciar sesión.']);
     }
 
     public function enviarCodigo(Request $request)
@@ -141,8 +183,8 @@ class AuthController extends Controller
         $correo = strtolower($request->correo);
 
         // Verificar que el correo exista en usuarios o personal_administrativo
-        $existeUser  = DB::table('usuarios')->where('correo_institucional', $correo)->exists();
-        $existeAdmin = DB::table('personal_administrativo')->where('correo_institucional', $correo)->exists();
+        $existeUser  = Usuario::where('correo_institucional', $correo)->exists();
+        $existeAdmin = PersonalAdministrativo::where('correo_institucional', $correo)->exists();
 
         if (!$existeUser && !$existeAdmin) {
             return response()->json(['mensaje' => 'No se encontró ninguna cuenta con ese correo.'], 404);
@@ -151,10 +193,10 @@ class AuthController extends Controller
         // Generar código de 6 dígitos en texto plano
         $codigoPlano = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        // ✅ Hashear el código antes de guardarlo en la DB (nunca se guarda en texto plano)
+        // ✅ Hashear el código antes de guardarlo en la DB
         $codigoHasheado = Hash::make($codigoPlano);
 
-        DB::table('recuperacion_codigos')->updateOrInsert(
+        RecuperacionCodigo::updateOrCreate(
             ['correo'    => $correo],
             ['codigo'    => $codigoHasheado,
              'creado_en' => now()]
@@ -179,8 +221,8 @@ class AuthController extends Controller
         // En desarrollo local: mostrar el código en pantalla si el email falló
         $respuesta = [
             'mensaje' => $emailEnviado
-                ? '✅ Código enviado a tu correo institucional.'
-                : '⚠️ SMTP no configurado. Usa el código de prueba mostrado abajo.'
+                ? 'Código enviado a tu correo institucional.'
+                : 'SMTP no configurado. Usa el código de prueba mostrado abajo.'
         ];
 
         if (!$emailEnviado && app()->environment('local')) {
@@ -202,7 +244,7 @@ class AuthController extends Controller
         $correo = strtolower($request->correo);
 
         // Buscar el registro del código
-        $registroCodigo = DB::table('recuperacion_codigos')->where('correo', $correo)->first();
+        $registroCodigo = RecuperacionCodigo::where('correo', $correo)->first();
 
         // Verificar que existe y que el código en texto plano coincide con el hash guardado
         if (!$registroCodigo || !Hash::check($request->codigo, $registroCodigo->codigo)) {
@@ -212,26 +254,24 @@ class AuthController extends Controller
         // ✅ Verificar que el código no tenga más de 15 minutos
         $creadoEn = \Carbon\Carbon::parse($registroCodigo->creado_en);
         if ($creadoEn->diffInMinutes(now()) > 15) {
-            DB::table('recuperacion_codigos')->where('correo', $correo)->delete();
+            RecuperacionCodigo::where('correo', $correo)->delete();
             return response()->json(['mensaje' => 'El código ha expirado. Solicita uno nuevo.'], 400);
         }
 
         $nuevaPassword = Hash::make($request->nuevaContrasena);
 
         // Actualizar en tabla usuarios (pasantes)
-        $actualizadoUsuarios = DB::table('usuarios')
-            ->where('correo_institucional', $correo)
+        $actualizadoUsuarios = Usuario::where('correo_institucional', $correo)
             ->update(['password' => $nuevaPassword]);
 
         // Si no se actualizó en usuarios, intentar en personal_administrativo
         if (!$actualizadoUsuarios) {
-            DB::table('personal_administrativo')
-                ->where('correo_institucional', $correo)
+            PersonalAdministrativo::where('correo_institucional', $correo)
                 ->update(['password' => $nuevaPassword]);
         }
 
         // Eliminar el código usado
-        DB::table('recuperacion_codigos')->where('correo', $correo)->delete();
+        RecuperacionCodigo::where('correo', $correo)->delete();
 
         return response()->json(['mensaje' => 'Contraseña restablecida con éxito. Ya puedes iniciar sesión.']);
     }

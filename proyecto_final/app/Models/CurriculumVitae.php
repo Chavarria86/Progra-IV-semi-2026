@@ -10,6 +10,7 @@ class CurriculumVitae extends Model
 
     protected $fillable = [
         'usuario_id',
+        'titulo_cv',
         'nombre_archivo',
         'ruta_archivo',
         'url_publica',
@@ -38,6 +39,6 @@ class CurriculumVitae extends Model
      */
     public function usuario()
     {
-        return $this->belongsTo(UsuarioPasante::class, 'usuario_id', 'id');
+        return $this->belongsTo(Usuario::class, 'usuario_id', 'id');
     }
 }

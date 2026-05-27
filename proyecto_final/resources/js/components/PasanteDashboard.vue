@@ -1,91 +1,204 @@
 <template>
-  <div class="perfil-card">
+  <div class="pasante-dashboard">
 
     <!-- Wizard de CV (modal) -->
-    <CvWizard v-if="mostrarWizard" @cerrar="mostrarWizard = false" />
+    <CvWizard 
+      v-if="mostrarWizard" 
+      :cvAEditar="cvSeleccionadoParaEditar" 
+      @cerrar="cerrarWizard" 
+      @guardado="recargarCvs" 
+    />
 
-    <div class="perfil-form">
-      <div class="form-group-custom">
-        <label>Nombres:</label>
-        <div class="input-display">{{ usuario.nombres || 'Cargando...' }}</div>
-      </div>
-      <div class="form-group-custom">
-        <label>Apellidos:</label>
-        <div class="input-display">{{ usuario.apellidos || 'Cargando...' }}</div>
-      </div>
-      <div class="form-group-custom">
-        <label>Correo Institucional:</label>
-        <div class="input-display">{{ usuario.correo || 'Cargando...' }}</div>
-      </div>
-      <div class="form-group-custom">
-        <label><i class="bi bi-link-45deg"></i> Link de Portafolio Digital o Repositorio:</label>
-        <div class="input-display"></div>
-      </div>
-    </div>
+    <!-- Componente activo según la sección activa -->
+    <PasanteOverview
+      v-if="seccionActiva === 'dashboard'"
+      :usuario="usuario"
+      :perfilCompleto="perfilCompleto"
+      @cambiarSeccion="$emit('cambiarSeccion', $event)"
+      @abrirWizard="abrirWizard"
+    />
 
-    <!-- Sección de CV -->
-    <div class="cv-section">
-      <p class="cv-status-text">Aun no se ha creado su currículum</p>
-      <button class="btn-crear-cv" @click="mostrarWizard = true">
-        <i class="bi bi-file-earmark-person me-2"></i> Crear CV
-      </button>
-    </div>
+    <PasantePerfilCvs
+      v-else-if="seccionActiva === 'perfil' || seccionActiva === 'cv'"
+      :usuario="usuario"
+      :cvs="cvs"
+      :cargandoCvs="cargandoCvs"
+      @abrirWizard="abrirWizard"
+      @editarCv="editarCv"
+      @eliminarCv="eliminarCv"
+    />
+
+    <PasanteInformes
+      v-else-if="seccionActiva === 'informes'"
+      :usuario="usuario"
+      :informes="informes"
+      :cargandoInformes="cargandoInformes"
+      @informeEnviado="recargarInformes"
+    />
+
+    <PasanteProgreso
+      v-else-if="seccionActiva === 'progreso'"
+      :perfilCompleto="perfilCompleto"
+    />
+
+    <PasanteAnalisisIa
+      v-else-if="seccionActiva === 'analisis_ia'"
+      :cvs="cvs"
+    />
+
+    <PasanteConfiguracion
+      v-else-if="seccionActiva === 'configuracion'"
+    />
+
+    <PasanteVacantes
+      v-else-if="seccionActiva === 'vacantes'"
+      :usuario="usuario"
+      @postulado="cargarPerfilCompleto"
+    />
 
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
+import axios from 'axios';
 import CvWizard from './CvWizard.vue';
 
+// Importación de subcomponentes refactorizados
+import PasanteOverview from './PasanteOverview.vue';
+import PasantePerfilCvs from './PasantePerfilCvs.vue';
+import PasanteInformes from './PasanteInformes.vue';
+import PasanteProgreso from './PasanteProgreso.vue';
+import PasanteAnalisisIa from './PasanteAnalisisIa.vue';
+import PasanteConfiguracion from './PasanteConfiguracion.vue';
+import PasanteVacantes from './PasanteVacantes.vue';
+
 const props = defineProps({ seccionActiva: String });
+const emit = defineEmits(['cambiarSeccion']);
 
 const usuario = ref({});
 const mostrarWizard = ref(false);
+const cvSeleccionadoParaEditar = ref(null);
+const cvs = ref([]);
+const cargandoCvs = ref(false);
+
+const perfilCompleto = ref({
+  fase_actual: 'F1',
+  estado: 'pendiente',
+  horas_aprobadas: 0,
+  horas_pendientes: 0
+});
+
+const informes = ref([]);
+const cargandoInformes = ref(false);
 
 onMounted(() => {
   const userJson = localStorage.getItem('usuario');
-  if (userJson) usuario.value = JSON.parse(userJson);
+  if (userJson) {
+    usuario.value = JSON.parse(userJson);
+    cargarCvs();
+    cargarPerfilCompleto();
+    cargarInformes();
+  }
 });
 
 // Abrir wizard cuando se haga clic en "Mi CV" del sidebar
 watch(() => props.seccionActiva, (val) => {
-  if (val === 'cv') mostrarWizard.value = true;
+  if (val === 'cv') {
+    cvSeleccionadoParaEditar.value = null;
+    mostrarWizard.value = true;
+  }
 });
+
+const cargarCvs = async () => {
+  if (!usuario.value.id) return;
+  cargandoCvs.value = true;
+  try {
+    const res = await axios.get(`/api/cv/${usuario.value.id}`);
+    cvs.value = res.data.cvs || [];
+  } catch (err) {
+    cvs.value = [];
+  } finally {
+    cargandoCvs.value = false;
+  }
+};
+
+const cargarPerfilCompleto = async () => {
+  if (!usuario.value.id) return;
+  try {
+    const res = await axios.get('/api/pasante/perfil', {
+      headers: {
+        'X-User-Id': usuario.value.id
+      }
+    });
+    if (res.data && res.data.perfil) {
+      perfilCompleto.value = res.data.perfil;
+    }
+  } catch (err) {
+    console.error('Error al cargar perfil completo:', err);
+  }
+};
+
+const cargarInformes = async () => {
+  if (!usuario.value.id) return;
+  cargandoInformes.value = true;
+  try {
+    const res = await axios.get('/api/pasante/informes', {
+      headers: { 'X-User-Id': usuario.value.id }
+    });
+    informes.value = res.data.informes || [];
+  } catch (err) {
+    console.error('Error al cargar informes:', err);
+  } finally {
+    cargandoInformes.value = false;
+  }
+};
+
+const recargarCvs = async () => {
+  await cargarCvs();
+};
+
+const recargarInformes = async () => {
+  await cargarInformes();
+  await cargarPerfilCompleto();
+};
+
+const abrirWizard = () => {
+  cvSeleccionadoParaEditar.value = null;
+  mostrarWizard.value = true;
+};
+
+const editarCv = (cv) => {
+  cvSeleccionadoParaEditar.value = cv;
+  mostrarWizard.value = true;
+};
+
+const cerrarWizard = () => {
+  cvSeleccionadoParaEditar.value = null;
+  mostrarWizard.value = false;
+};
+
+const eliminarCv = (cvId) => {
+  alertify.confirm(
+    'Eliminar Currículum',
+    '¿Estás seguro de que deseas eliminar este CV? Esta acción no se puede deshacer.',
+    async () => {
+      try {
+        await axios.delete(`/api/cv/${cvId}`);
+        cvs.value = cvs.value.filter(c => c.id !== cvId);
+        alertify.success('CV eliminado correctamente.');
+      } catch (err) {
+        alertify.error('Error al eliminar el CV. Inténtalo de nuevo.');
+      }
+    },
+    () => {}
+  ).set({ labels: { ok: 'Sí, eliminar', cancel: 'Cancelar' } });
+};
 </script>
 
 <style scoped>
-.perfil-card {
-  background-color: white;
-  border-radius: 8px;
-  padding: 40px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-  max-width: 800px;
+.pasante-dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
 }
-.perfil-form { margin-bottom: 50px; max-width: 450px; }
-.form-group-custom { margin-bottom: 20px; }
-.form-group-custom label {
-  display: block; font-family: 'Inter', sans-serif;
-  font-weight: 500; font-size: 16px; color: #000; margin-bottom: 5px;
-}
-.input-display {
-  background-color: #DEDCDC; border: 1px solid #B1ABAB;
-  border-radius: 6px; padding: 10px 15px; min-height: 42px;
-  font-family: 'Inter', sans-serif; font-size: 16px; color: #333;
-}
-.cv-section {
-  background-color: #DEDCDC; border-radius: 12px;
-  padding: 50px 20px; text-align: center; max-width: 650px; margin: 0 auto;
-}
-.cv-status-text {
-  color: #67000F; font-family: 'Inter', sans-serif;
-  font-size: 18px; font-weight: 500; margin-bottom: 30px;
-}
-.btn-crear-cv {
-  background-color: #010C67; color: white; border: none;
-  border-radius: 6px; padding: 12px 36px;
-  font-family: 'Inter', sans-serif; font-size: 16px; font-weight: bold;
-  cursor: pointer; transition: background-color 0.3s;
-}
-.btn-crear-cv:hover { background-color: #00589B; }
 </style>

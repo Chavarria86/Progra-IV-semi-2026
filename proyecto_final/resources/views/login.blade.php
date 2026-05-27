@@ -309,6 +309,7 @@
         
         <!-- INICIAR SESIÓN -->
         <div class="auth-card" v-if="vistaActual === 'login'">
+            <img src="{{ asset('images/logo_ugb.png') }}" alt="Logo UGB" class="img-fluid mb-3" style="max-height: 80px; object-fit: contain; display: block; margin: 0 auto;">
             <h2 class="titulo-genesis">Iniciar sesión</h2>
             <p class="subtitulo-genesis">Ingresa tu correo institucional para iniciar</p>
             
@@ -339,6 +340,7 @@
 
         <!-- REGISTRO -->
         <div class="auth-card" v-if="vistaActual === 'registro'">
+            <img src="{{ asset('images/logo_ugb.png') }}" alt="Logo UGB" class="img-fluid mb-3" style="max-height: 80px; object-fit: contain; display: block; margin: 0 auto;">
             <h2 class="titulo-genesis">Crea una cuenta</h2>
             <p class="subtitulo-genesis">Ingresa tus datos para crear una cuenta</p>
             
@@ -404,6 +406,7 @@
         <!-- RECUPERAR CONTRASEÑA -->
         <div class="auth-card" v-if="vistaActual === 'recuperar'">
             <button class="close-btn" @click="cambiarVista('login')">&times;</button>
+            <img src="{{ asset('images/logo_ugb.png') }}" alt="Logo UGB" class="img-fluid mb-3" style="max-height: 80px; object-fit: contain; display: block; margin: 0 auto;">
             <h2 class="titulo-genesis">Restablecer contraseña</h2>
             
             <!-- PASO 1: Ingresar Correo -->
@@ -630,7 +633,7 @@
 
                         // ✅ Si el SMTP está configurado → correo enviado
                         if (!response.data.codigo_dev) {
-                            alertify.success(response.data.mensaje || '✅ Código enviado a tu correo.');
+                            alertify.success(response.data.mensaje || 'Código enviado a tu correo.');
                         }
 
                         // 🛠️ Modo desarrollo: SMTP no configurado → mostrar código en pantalla
@@ -639,7 +642,7 @@
                             // Auto-rellenar las cajas
                             this.codigoArray = codigo.split('');
                             alertify.notify(
-                                `⚠️ <b>MODO DESARROLLO</b><br>SMTP no configurado.<br>Tu código es: <b style="font-size:22px;letter-spacing:6px">${codigo}</b>`,
+                                `<b>MODO DESARROLLO</b><br>SMTP no configurado.<br>Tu código es: <b style="font-size:22px;letter-spacing:6px">${codigo}</b>`,
                                 'warning',
                                 15
                             );

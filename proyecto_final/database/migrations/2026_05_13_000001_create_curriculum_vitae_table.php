@@ -13,7 +13,10 @@ return new class extends Migration
 
             // Relación con la tabla 'usuarios' (pasantes)
             // La tabla usuarios usa int(11), por eso usamos unsignedInteger
-            $table->unsignedInteger('usuario_id')->unique(); // Un usuario = un CV
+            $table->unsignedInteger('usuario_id'); // Un usuario puede tener múltiples CVs
+
+            // Nombre del CV elegido por el usuario
+            $table->string('titulo_cv')->default('Mi CV');
 
             // Archivo PDF
             $table->string('nombre_archivo');       // Ej: CV_Juan_Perez.pdf
@@ -44,7 +47,6 @@ return new class extends Migration
             $table->string('estado')->default('activo'); // activo, archivado
             $table->timestamps(); // created_at, updated_at
 
-            /
             $table->index('usuario_id');
         });
     }
