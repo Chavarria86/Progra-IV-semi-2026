@@ -115,7 +115,7 @@ class CvController extends Controller
     }
 
     /**
-     * Eliminar un CV específico por su ID.
+     * Eliminar un CV específico por su ID de forma segura.
      */
     public function eliminar(Request $request, $cvId)
     {
@@ -125,8 +125,17 @@ class CvController extends Controller
             return response()->json(['mensaje' => 'No se encontró el CV.'], 404);
         }
 
-        // Eliminar archivo físico
-        Storage::disk('public')->delete($cv->ruta_archivo);
+        // Desvincular de postulaciones para evitar romper la integridad referencial
+        DB::table('postulaciones')->where('cv_id', $cvId)->update(['cv_id' => null]);
+
+        // Eliminar archivo físico de forma segura (previene fallos en entornos con permisos especiales o OneDrive)
+        try {
+            if ($cv->ruta_archivo) {
+                Storage::disk('public')->delete($cv->ruta_archivo);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning("No se pudo eliminar el archivo físico del CV {$cvId}: " . $e->getMessage());
+        }
 
         $cv->delete();
 

@@ -43,6 +43,41 @@
           </div>
         </div>
 
+        <!-- Detalle del Informe Seleccionado -->
+        <div v-if="informeSeleccionado" class="informe-detalle-box animate-fade-in">
+          <div class="detalle-title-container">
+            <h5 class="detalle-title">{{ informeSeleccionado.nombre || 'Informe Final de Pasantía' }}</h5>
+            <span class="detalle-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="margin-right: 4px;">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              {{ informeSeleccionado.horas || 0 }} Horas Reportadas
+            </span>
+          </div>
+
+          <div class="detalle-seccion" v-if="informeSeleccionado.objetivos">
+            <div class="detalle-seccion-title">Objetivos</div>
+            <div class="detalle-seccion-content">{{ informeSeleccionado.objetivos }}</div>
+          </div>
+
+          <div class="detalle-seccion" v-if="informeSeleccionado.actividades">
+            <div class="detalle-seccion-title">Actividades Realizadas</div>
+            <div class="detalle-seccion-content">{{ informeSeleccionado.actividades }}</div>
+          </div>
+
+          <div class="detalle-seccion" v-if="informeSeleccionado.conclusiones">
+            <div class="detalle-seccion-title">Conclusiones</div>
+            <div class="detalle-seccion-content">{{ informeSeleccionado.conclusiones }}</div>
+          </div>
+
+          <div class="detalle-seccion" v-if="informeSeleccionado.archivo_url">
+            <div class="detalle-seccion-title">Documento Oficial Autogenerado (PDF)</div>
+            <div class="pdf-preview-container" style="height: 480px;">
+              <iframe :src="informeSeleccionado.archivo_url" width="100%" height="100%" style="border: none;"></iframe>
+            </div>
+          </div>
+        </div>
+
         <!-- Veredicto -->
         <div class="field-group">
           <label>Veredicto</label>
@@ -79,7 +114,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
@@ -91,6 +126,10 @@ const emit = defineEmits(['evaluar']);
 const evaluacion = ref({ informe_id: '', veredicto: 'aprobado', observaciones: '' });
 const informesDisponibles = ref([]);
 const cargandoInformes = ref(true);
+
+const informeSeleccionado = computed(() => {
+  return informesDisponibles.value.find(inf => inf.id === evaluacion.value.informe_id) || null;
+});
 
 onMounted(async () => {
   await cargarInformes();
@@ -224,4 +263,66 @@ textarea { resize: vertical; min-height: 100px; }
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Informe Detalle Box */
+.informe-detalle-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 16px;
+  margin-bottom: 24px;
+}
+.detalle-title-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+.detalle-title {
+  font-family: 'Lora', serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0;
+}
+.detalle-badge {
+  background: var(--accent);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+.detalle-seccion {
+  margin-bottom: 16px;
+}
+.detalle-seccion-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--sub);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.detalle-seccion-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+.pdf-preview-container {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
 </style>

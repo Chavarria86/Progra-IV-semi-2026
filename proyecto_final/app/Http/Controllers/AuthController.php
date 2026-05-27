@@ -111,27 +111,27 @@ class AuthController extends Controller
                 return response()->json(['mensaje' => 'Esta cuenta ya está registrada. Por favor inicia sesión.'], 400);
             }
 
-            // 3. Insertar usuario usando los nombres oficiales de la base de datos de estudiantes
-            $usuario = Usuario::create([
-                'nombres' => $estudiante->nombre,
-                'apellidos' => $estudiante->apellido,
-                'correo_institucional' => $correo,
-                'password' => Hash::make($request->contrasena),
-                'estado' => 'activo',
-                'rol' => 'pasante',
-                'fecha_registro' => now()
-            ]);
-
-            // 4. Crear registro asociado en la tabla pasantes automáticamente
-            Pasante::create([
-                'usuario_id' => $usuario->id,
-                'area' => $estudiante->carrera, // Podemos guardar la carrera como el área inicial
-                'tipo_pasantia' => 'Por definir',
-                'estado' => 'en_proceso',
-                'fase_actual' => 'Pendiente',
-            ]);
-
-            return response()->json(['mensaje' => 'Cuenta de pasante verificada y creada con éxito. Ahora puedes iniciar sesión.']);
+             // 3. Insertar usuario usando los nombres oficiales de la base de datos de estudiantes
+             $usuario = Usuario::create([
+                 'nombres' => $estudiante->nombres,
+                 'apellidos' => $estudiante->apellidos,
+                 'correo_institucional' => $correo,
+                 'password' => Hash::make($request->contrasena),
+                 'estado' => 'activo',
+                 'rol' => 'pasante',
+                 'fecha_registro' => now()
+             ]);
+ 
+             // 4. Crear registro asociado en la tabla pasantes automáticamente
+             Pasante::create([
+                 'usuario_id' => $usuario->id,
+                 'area' => $estudiante->carrera ?? 'Ingeniería en Sistemas', // Podemos guardar la carrera como el área inicial
+                 'tipo_pasantia' => 'Por definir',
+                 'estado' => 'en_proceso',
+                 'fase_actual' => 'Pendiente',
+             ]);
+ 
+             return response()->json(['mensaje' => 'Cuenta de pasante verificada y creada con éxito. Ahora puedes iniciar sesión.']);
         } else {
             // Se trata de Personal Administrativo (Supervisor o Vicedecano)
             // 1. Verificar si ya existe en usuarios o personal_administrativo

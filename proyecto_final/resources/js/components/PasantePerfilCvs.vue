@@ -36,21 +36,41 @@
             </button>
           </div>
 
+          <!-- Buscador de CVs (visible si hay CVs creados) -->
+          <div v-if="cvs.length > 0" class="cv-search-bar mt-3 mb-2">
+            <div class="input-group-custom position-relative">
+              <input 
+                type="text" 
+                class="form-control-custom ps-5" 
+                placeholder="Buscar en mis CVs (título, perfil, habilidades, logros...)" 
+                v-model="filtroBusqueda"
+              />
+              <i class="bi bi-search position-absolute" style="left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 16px;"></i>
+            </div>
+          </div>
+
           <!-- Loading cvs -->
           <div v-if="cargandoCvs" class="cv-loading mt-4">
             <span class="spinner-border spinner-border-sm me-2 text-primary"></span> Cargando documentos...
           </div>
 
-          <!-- Lista vacía -->
+          <!-- Lista vacía por falta de CVs -->
           <div v-else-if="cvs.length === 0" class="cv-empty-state mt-4">
             <i class="bi bi-file-earmark-x cv-empty-icon"></i>
             <p class="cv-status-text text-danger font-weight-bold">Aún no has creado ningún currículum</p>
             <p class="cv-hint">Haz clic en "Crear nuevo" para empezar a generar tu hoja de vida profesional.</p>
           </div>
 
+          <!-- Lista vacía por filtro de búsqueda -->
+          <div v-else-if="cvsFiltrados.length === 0" class="cv-empty-state mt-4">
+            <i class="bi bi-search cv-empty-icon text-muted"></i>
+            <p class="cv-status-text text-muted font-weight-bold">No se encontraron resultados</p>
+            <p class="cv-hint">Prueba con otros términos o limpia el campo de búsqueda.</p>
+          </div>
+
           <!-- Lista de CVs -->
           <div v-else class="cv-lista mt-3">
-            <div v-for="cv in cvs" :key="cv.id" class="cv-card">
+            <div v-for="cv in cvsFiltrados" :key="cv.id" class="cv-card">
               <div class="cv-card-icon">
                 <i class="bi bi-file-earmark-pdf-fill"></i>
               </div>
@@ -81,6 +101,8 @@
 </template>
 
 <script setup>
+import { ref, computed } from 'vue';
+
 const props = defineProps({
   usuario: { type: Object, default: () => ({}) },
   cvs: { type: Array, default: () => [] },
@@ -88,6 +110,31 @@ const props = defineProps({
 });
 
 defineEmits(['abrirWizard', 'editarCv', 'eliminarCv']);
+
+const filtroBusqueda = ref('');
+
+const cvsFiltrados = computed(() => {
+  if (!filtroBusqueda.value.trim()) return props.cvs;
+  
+  const query = filtroBusqueda.value.toLowerCase().trim();
+  
+  return props.cvs.filter(cv => {
+    return (
+      (cv.titulo_cv && cv.titulo_cv.toLowerCase().includes(query)) ||
+      (cv.nombre_completo && cv.nombre_completo.toLowerCase().includes(query)) ||
+      (cv.sobre_mi && cv.sobre_mi.toLowerCase().includes(query)) ||
+      (cv.educacion && cv.educacion.toLowerCase().includes(query)) ||
+      (cv.objetivo && cv.objetivo.toLowerCase().includes(query)) ||
+      (cv.valores && cv.valores.toLowerCase().includes(query)) ||
+      (cv.conocimientos && cv.conocimientos.toLowerCase().includes(query)) ||
+      (cv.idiomas && cv.idiomas.toLowerCase().includes(query)) ||
+      (cv.certificados && cv.certificados.toLowerCase().includes(query)) ||
+      (cv.habilidades && cv.habilidades.toLowerCase().includes(query)) ||
+      (cv.logros && cv.logros.toLowerCase().includes(query)) ||
+      (cv.proyectos_sociales && cv.proyectos_sociales.toLowerCase().includes(query))
+    );
+  });
+});
 
 const formatearFecha = (fecha) => {
   if (!fecha) return '';
@@ -308,5 +355,15 @@ const formatearFecha = (fecha) => {
 
 .btn-accion:hover {
   transform: scale(1.05);
+}
+
+.position-relative {
+  position: relative;
+}
+.position-absolute {
+  position: absolute;
+}
+.ps-5 {
+  padding-left: 42px !important;
 }
 </style>
