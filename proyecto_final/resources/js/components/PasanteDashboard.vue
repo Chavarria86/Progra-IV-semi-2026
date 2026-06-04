@@ -41,15 +41,6 @@
       :perfilCompleto="perfilCompleto"
     />
 
-    <PasanteAnalisisIa
-      v-else-if="seccionActiva === 'analisis_ia'"
-      :cvs="cvs"
-    />
-
-    <PasanteConfiguracion
-      v-else-if="seccionActiva === 'configuracion'"
-    />
-
     <PasanteVacantes
       v-else-if="seccionActiva === 'vacantes'"
       :usuario="usuario"
@@ -69,8 +60,7 @@ import PasanteOverview from './PasanteOverview.vue';
 import PasantePerfilCvs from './PasantePerfilCvs.vue';
 import PasanteInformes from './PasanteInformes.vue';
 import PasanteProgreso from './PasanteProgreso.vue';
-import PasanteAnalisisIa from './PasanteAnalisisIa.vue';
-import PasanteConfiguracion from './PasanteConfiguracion.vue';
+
 import PasanteVacantes from './PasanteVacantes.vue';
 
 const props = defineProps({ seccionActiva: String });

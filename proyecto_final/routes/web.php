@@ -6,6 +6,7 @@ use App\Http\Controllers\PasanteController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\ViceDecanoController;
 use App\Http\Controllers\CvController;
+use App\Http\Controllers\AiChatController;
 
 // Rutas de API
 Route::prefix('api')->group(function () {
@@ -45,7 +46,9 @@ Route::prefix('api')->group(function () {
         
         // Informes
         Route::get('/informes', [SupervisorController::class, 'getInformesPendientes']);
+        Route::get('/informes-revisados', [SupervisorController::class, 'getInformesRevisados']);
         Route::put('/informes/{id}/evaluar', [SupervisorController::class, 'evaluarInforme']);
+        Route::put('/informes/{id}/observar', [SupervisorController::class, 'actualizarObservacion']);
 
         // Solicitudes de Asignación de Pasante
         Route::get('/solicitudes', [SupervisorController::class, 'getSolicitudes']);
@@ -55,8 +58,9 @@ Route::prefix('api')->group(function () {
         Route::get('/postulaciones', [SupervisorController::class, 'getPostulaciones']);
         Route::put('/postulaciones/{id}/responder', [SupervisorController::class, 'responderPostulacion']);
 
-        // Vacantes (Deshabilitado: solo el Vicedecano crea vacantes)
-        // Route::post('/vacantes', [SupervisorController::class, 'crearVacante']);
+        // Vacantes (Ver y sugerir)
+        Route::get('/vacantes', [SupervisorController::class, 'getVacantes']);
+        Route::post('/sugerir-vacante', [SupervisorController::class, 'sugerirVacante']);
 
         // Recomendaciones
         Route::get('/recomendaciones', [SupervisorController::class, 'getRecomendaciones']);
@@ -80,6 +84,15 @@ Route::prefix('api')->group(function () {
     Route::get('/cv/{usuarioId}', [CvController::class, 'obtener']);
     // Eliminar un CV específico por su cv ID
     Route::delete('/cv/{cvId}', [CvController::class, 'eliminar']);
+
+    // ── Rutas de Asistente de IA (Chatbot) ─────────────────────────────────────
+    Route::prefix('ai')->group(function () {
+        Route::get('/chats', [AiChatController::class, 'getChats']);
+        Route::post('/chats', [AiChatController::class, 'crearChat']);
+        Route::get('/chats/{id}/mensajes', [AiChatController::class, 'getMensajes']);
+        Route::post('/chats/{id}/enviar', [AiChatController::class, 'enviarMensaje']);
+        Route::get('/adjuntos-disponibles', [AiChatController::class, 'getAdjuntosDisponibles']);
+    });
 });
 
 // Ruta para la vista de login (Blade) - Si prefieren usar blade en vez de Vue

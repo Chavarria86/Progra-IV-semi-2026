@@ -71,7 +71,12 @@
           </div>
 
           <div class="detalle-seccion" v-if="informeSeleccionado.archivo_url">
-            <div class="detalle-seccion-title">Documento Oficial Autogenerado (PDF)</div>
+            <div class="detalle-seccion-title d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <span>Documento Oficial Autogenerado (PDF)</span>
+              <a :href="informeSeleccionado.archivo_url" target="_blank" class="btn-open-pdf-tab">
+                <i class="bi bi-box-arrow-up-right me-1"></i> Abrir en pestaña nueva
+              </a>
+            </div>
             <div class="pdf-preview-container" style="height: 480px;">
               <iframe :src="informeSeleccionado.archivo_url" width="100%" height="100%" style="border: none;"></iframe>
             </div>
@@ -280,6 +285,8 @@ textarea { resize: vertical; min-height: 100px; }
   border-bottom: 2px solid var(--border);
   padding-bottom: 12px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 .detalle-title {
   font-family: 'Lora', serif;
@@ -324,5 +331,14 @@ textarea { resize: vertical; min-height: 100px; }
   border-radius: 8px;
   overflow: hidden;
   background: white;
+}
+.btn-open-pdf-tab {
+  font-size: 0.82rem;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.btn-open-pdf-tab:hover {
+  opacity: 0.85;
 }
 </style>

@@ -15,6 +15,7 @@ class CurriculumVitae extends Model
         'ruta_archivo',
         'url_publica',
         'nombre_completo',
+        'profesion',
         'direccion',
         'email',
         'telefono',

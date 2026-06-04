@@ -34,8 +34,8 @@ class PasanteController extends Controller
             'tipo_pasantia' => $usuario->pasante->tipo_pasantia,
             'estado' => $usuario->pasante->estado,
             'fase_actual' => $usuario->pasante->fase_actual,
-            'horas_aprobadas' => (int) $usuario->pasante->horas_aprobadas,
-            'horas_pendientes' => (int) Informe::where('pasante_id', $usuario->pasante->id)->where('estado', 'en_espera')->sum('horas')
+            'horas_aprobadas' => (float) $usuario->pasante->horas_aprobadas,
+            'horas_pendientes' => (float) Informe::where('pasante_id', $usuario->pasante->id)->where('estado', 'en_espera')->sum('horas')
         ];
 
         $cv = CurriculumVitae::where('usuario_id', $usuario->id)->first();
@@ -97,7 +97,7 @@ class PasanteController extends Controller
         $usuario_id = $request->header('X-User-Id', 4);
         $request->validate([
             'tipo' => 'required|in:parcial,final',
-            'horas' => 'required|integer|min:1',
+            'horas' => 'required|numeric|min:0.01',
             'archivo' => 'nullable|file|mimes:pdf|max:10240',
             'nombre' => 'nullable|string|max:255',
             'objetivos' => 'nullable|string',
@@ -157,7 +157,7 @@ class PasanteController extends Controller
     {
         $request->validate([
             'tipo' => 'required|in:parcial,final',
-            'horas' => 'required|integer|min:1',
+            'horas' => 'required|numeric|min:0.01',
             'archivo' => 'nullable|file|mimes:pdf|max:10240',
             'nombre' => 'nullable|string|max:255',
             'objetivos' => 'nullable|string',
@@ -330,12 +330,21 @@ class PasanteController extends Controller
             return response()->json(['mensaje' => 'Vacante no disponible.'], 404);
         }
 
-        // Verificar si ya aplicó
-        $yaAplico = Postulacion::where('pasante_id', $pasante->id)
+        // Verificar si ya existe postulación o sugerencia
+        $postulacion = Postulacion::where('pasante_id', $pasante->id)
             ->where('vacante_id', $id)
-            ->exists();
+            ->first();
 
-        if ($yaAplico) {
+        if ($postulacion) {
+            if ($postulacion->estado === 'sugerida') {
+                // Si ya fue sugerida, actualizamos el estado a 'pendiente' y asociamos el cv_id
+                $postulacion->update([
+                    'estado' => 'pendiente',
+                    'cv_id' => $request->cv_id ?? null,
+                    'created_at' => now() // Reset timestamp to now
+                ]);
+                return response()->json(['mensaje' => 'Postulación enviada exitosamente.']);
+            }
             return response()->json(['mensaje' => 'Ya has aplicado a esta vacante.'], 409);
         }
 

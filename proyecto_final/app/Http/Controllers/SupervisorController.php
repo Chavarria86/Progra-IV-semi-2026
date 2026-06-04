@@ -36,14 +36,25 @@ class SupervisorController extends Controller
         return $primerSupervisor ? $primerSupervisor->id : 1;
     }
 
+    private function esVicedecano(Request $request)
+    {
+        $usuario = Usuario::find($request->header('X-User-Id'));
+        return ($usuario && $usuario->rol === 'vice_decano');
+    }
+
     // Obtener los pasantes asignados a este supervisor
     public function getPasantes(Request $request)
     {
+        $usuario = Usuario::find($request->header('X-User-Id'));
+        $esVicedecano = ($usuario && $usuario->rol === 'vice_decano');
         $supervisor_id = $this->resolverSupervisorId($request->header('X-User-Id', 1));
 
-        $pasantes = Pasante::with('usuario')
-            ->where('supervisor_id', $supervisor_id)
-            ->get()
+        $pasantesQuery = Pasante::with('usuario');
+        if (!$esVicedecano) {
+            $pasantesQuery->where('supervisor_id', $supervisor_id);
+        }
+
+        $pasantes = $pasantesQuery->get()
             ->map(function ($p) {
                 return (object)[
                     'nombre' => $p->usuario->nombres ?? '',
@@ -62,6 +73,9 @@ class SupervisorController extends Controller
     // Validar el CV de un pasante
     public function validarCV(Request $request, $id)
     {
+        if ($this->esVicedecano($request)) {
+            return response()->json(['mensaje' => 'Acción no permitida en modo vista para Vicedecano.'], 403);
+        }
         $cv = CurriculumVitae::find($id);
         if (!$cv) {
             return response()->json(['mensaje' => 'CV no encontrado.'], 404);
@@ -80,6 +94,9 @@ class SupervisorController extends Controller
     // Rechazar el CV de un pasante
     public function rechazarCV(Request $request, $id)
     {
+        if ($this->esVicedecano($request)) {
+            return response()->json(['mensaje' => 'Acción no permitida en modo vista para Vicedecano.'], 403);
+        }
         $request->validate(['observaciones' => 'required|string']);
 
         $cv = CurriculumVitae::find($id);
@@ -98,6 +115,9 @@ class SupervisorController extends Controller
     // Asignar un pasante a una vacante o empresa
     public function asignarPasante(Request $request)
     {
+        if ($this->esVicedecano($request)) {
+            return response()->json(['mensaje' => 'Acción no permitida en modo vista para Vicedecano.'], 403);
+        }
         $request->validate([
             'pasante_id' => 'required|integer',
             'vacante_id' => 'required|integer'
@@ -131,14 +151,25 @@ class SupervisorController extends Controller
     // Obtener CVs pendientes de validación
     public function getCvsPendientes(Request $request)
     {
+        $usuario = Usuario::find($request->header('X-User-Id'));
+        $esVicedecano = ($usuario && $usuario->rol === 'vice_decano');
         $supervisor_id = $this->resolverSupervisorId($request->header('X-User-Id', 1));
 
-        // Obtenemos los pasantes de este supervisor
-        $pasantesIds = Pasante::where('supervisor_id', $supervisor_id)->pluck('usuario_id');
+        // Obtenemos los pasantes correspondientes
+        if ($esVicedecano) {
+            $pasantesIds = Pasante::pluck('usuario_id');
+        } else {
+            $pasantesIds = Pasante::where('supervisor_id', $supervisor_id)->pluck('usuario_id');
+        }
 
-        $cvs = CurriculumVitae::whereIn('usuario_id', $pasantesIds)
-            ->where('estado', 'activo') // O 'subido' o 'pendiente' dependiendo cómo lo guardemos
-            ->with('usuario')
+        // Para el vicedecano, listamos todos los CVs (activos o ya validados/rechazados para que pueda verlos)
+        // Pero para el supervisor normal, solo 'activo'
+        $queryCvs = CurriculumVitae::whereIn('usuario_id', $pasantesIds);
+        if (!$esVicedecano) {
+            $queryCvs->where('estado', 'activo');
+        }
+
+        $cvs = $queryCvs->with('usuario')
             ->get()
             ->map(function ($cv) {
                 return (object)[
@@ -157,8 +188,15 @@ class SupervisorController extends Controller
     // Obtener informes pendientes
     public function getInformesPendientes(Request $request)
     {
+        $usuario = Usuario::find($request->header('X-User-Id'));
+        $esVicedecano = ($usuario && $usuario->rol === 'vice_decano');
         $supervisor_id = $this->resolverSupervisorId($request->header('X-User-Id', 1));
-        $pasantesIds = Pasante::where('supervisor_id', $supervisor_id)->pluck('id');
+
+        if ($esVicedecano) {
+            $pasantesIds = Pasante::pluck('id');
+        } else {
+            $pasantesIds = Pasante::where('supervisor_id', $supervisor_id)->pluck('id');
+        }
 
         $informes = Informe::with('pasante.usuario')
             ->whereIn('pasante_id', $pasantesIds)
@@ -184,13 +222,22 @@ class SupervisorController extends Controller
     // Evaluar informe (aprobar / solicitar correcciones)
     public function evaluarInforme(Request $request, $id)
     {
-        $request->validate(['decision' => 'required|in:aprobar,rechazar']);
+        if ($this->esVicedecano($request)) {
+            return response()->json(['mensaje' => 'Acción no permitida en modo vista para Vicedecano.'], 403);
+        }
+        $request->validate([
+            'decision' => 'required|in:aprobar,rechazar',
+            'observaciones' => 'nullable|string'
+        ]);
         
         $informe = Informe::with('pasante')->find($id);
         if (!$informe) return response()->json(['mensaje' => 'Informe no encontrado'], 404);
 
         if ($request->decision === 'aprobar') {
-            $informe->update(['estado' => 'aprobado']);
+            $informe->update([
+                'estado' => 'aprobado',
+                'observaciones' => $request->observaciones ?? null
+            ]);
             
             // Actualizar el progreso del pasante
             if ($informe->pasante) {
@@ -211,17 +258,96 @@ class SupervisorController extends Controller
 
             return response()->json(['mensaje' => 'Informe aprobado correctamente. Las horas se han sumado al historial del pasante.']);
         } else {
-            $informe->update(['estado' => 'correccion']);
+            $informe->update([
+                'estado' => 'correccion',
+                'observaciones' => $request->observaciones
+            ]);
             return response()->json(['mensaje' => 'Informe rechazado para correcciones.']);
         }
+    }
+
+    // Obtener informes revisados (historial)
+    public function getInformesRevisados(Request $request)
+    {
+        $usuario = Usuario::find($request->header('X-User-Id'));
+        $esVicedecano = ($usuario && $usuario->rol === 'vice_decano');
+        $supervisor_id = $this->resolverSupervisorId($request->header('X-User-Id', 1));
+
+        if ($esVicedecano) {
+            $pasantesIds = Pasante::pluck('id');
+        } else {
+            $pasantesIds = Pasante::where('supervisor_id', $supervisor_id)->pluck('id');
+        }
+
+        $informes = Informe::with('pasante.usuario')
+            ->whereIn('pasante_id', $pasantesIds)
+            ->whereIn('estado', ['aprobado', 'correccion'])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($inf) {
+                return (object)[
+                    'id' => $inf->id,
+                    'pasante' => ($inf->pasante->usuario->nombres ?? '') . ' ' . ($inf->pasante->usuario->apellidos ?? ''),
+                    'nombre' => $inf->nombre ?: ('Informe ' . ucfirst($inf->tipo)),
+                    'fecha' => $inf->created_at ? $inf->created_at->format('d M Y') : date('d M Y'),
+                    'fecha_revision' => $inf->created_at ? $inf->created_at->format('d M Y H:i') : null,
+                    'horas' => $inf->horas ?? 0,
+                    'objetivos' => $inf->objetivos ?: 'No se registraron objetivos.',
+                    'actividades' => $inf->actividades ?: 'No se registraron actividades.',
+                    'conclusiones' => $inf->conclusiones ?: 'No se registraron conclusiones.',
+                    'archivo_url' => $inf->archivo_url,
+                    'estado' => $inf->estado,
+                    'observaciones' => $inf->observaciones
+                ];
+            });
+
+        return response()->json(['informes' => $informes]);
+    }
+
+    // Actualizar observaciones en un informe ya revisado
+    public function actualizarObservacion(Request $request, $id)
+    {
+        if ($this->esVicedecano($request)) {
+            return response()->json(['mensaje' => 'Acción no permitida en modo vista para Vicedecano.'], 403);
+        }
+        $request->validate([
+            'observaciones' => 'required|string',
+            'estado' => 'sometimes|in:aprobado,correccion'
+        ]);
+
+        $informe = Informe::find($id);
+        if (!$informe) {
+            return response()->json(['mensaje' => 'Informe no encontrado'], 404);
+        }
+
+        $dataToUpdate = [
+            'observaciones' => $request->observaciones
+        ];
+
+        if ($request->has('estado')) {
+            $dataToUpdate['estado'] = $request->estado;
+        }
+
+        $informe->update($dataToUpdate);
+
+        return response()->json([
+            'mensaje' => 'Observación actualizada con éxito.',
+            'informe' => $informe
+        ]);
     }
 
     // Obtener postulaciones a vacantes de sus pasantes a cargo
     public function getPostulaciones(Request $request)
     {
+        $usuario = Usuario::find($request->header('X-User-Id'));
+        $esVicedecano = ($usuario && $usuario->rol === 'vice_decano');
         $supervisor_id = $this->resolverSupervisorId($request->header('X-User-Id', 1));
         
-        $pasantesIds = Pasante::where('supervisor_id', $supervisor_id)->pluck('id');
+        if ($esVicedecano) {
+            $pasantesIds = Pasante::pluck('id');
+        } else {
+            $pasantesIds = Pasante::where('supervisor_id', $supervisor_id)->pluck('id');
+        }
 
         $solicitudes = Postulacion::with(['pasante.usuario', 'vacante'])
             ->whereIn('pasante_id', $pasantesIds)
@@ -244,6 +370,9 @@ class SupervisorController extends Controller
     // Responder a postulación (aprobar_por_supervisor)
     public function responderPostulacion(Request $request, $id)
     {
+        if ($this->esVicedecano($request)) {
+            return response()->json(['mensaje' => 'Acción no permitida en modo vista para Vicedecano.'], 403);
+        }
         $request->validate(['decision' => 'required|in:aceptar,rechazar']);
         
         $postulacion = Postulacion::find($id);
@@ -261,12 +390,20 @@ class SupervisorController extends Controller
     // Obtener los pasantes a cargo
     public function getMisPasantes(Request $request)
     {
+        $usuario = Usuario::find($request->header('X-User-Id'));
+        $esVicedecano = ($usuario && $usuario->rol === 'vice_decano');
         $supervisor_id = $this->resolverSupervisorId($request->header('X-User-Id', 1));
-        $pasantes = Pasante::with('usuario')->where('supervisor_id', $supervisor_id)->get()->map(function($p) {
+
+        $pasantesQuery = Pasante::with('usuario');
+        if (!$esVicedecano) {
+            $pasantesQuery->where('supervisor_id', $supervisor_id);
+        }
+
+        $pasantes = $pasantesQuery->get()->map(function($p) {
             return [
                 'id' => $p->id,
-                'nombre' => $p->usuario->nombres . ' ' . $p->usuario->apellidos,
-                'correo' => $p->usuario->correo_institucional,
+                'nombre' => ($p->usuario->nombres ?? '') . ' ' . ($p->usuario->apellidos ?? ''),
+                'correo' => $p->usuario->correo_institucional ?? '',
                 'area' => $p->area,
                 'fase_actual' => $p->fase_actual,
                 'horas_aprobadas' => $p->horas_aprobadas
@@ -278,6 +415,9 @@ class SupervisorController extends Controller
     // Crear Vacantes (Supervisor)
     public function crearVacante(Request $request)
     {
+        if ($this->esVicedecano($request)) {
+            return response()->json(['mensaje' => 'Acción no permitida en modo vista para Vicedecano.'], 403);
+        }
         $request->validate([
             'empresa' => 'required|string|max:255',
             'area' => 'required|string|max:255',
@@ -297,16 +437,87 @@ class SupervisorController extends Controller
         return response()->json(['mensaje' => 'Vacante creada exitosamente.', 'vacante' => $vacante]);
     }
 
+    // Obtener todas las vacantes para el supervisor
+    public function getVacantes(Request $request)
+    {
+        $area = $request->query('area');
+        $query = Vacante::where('estado', 'activa');
+        if ($area) {
+            $query->where('area', $area);
+        }
+        $vacantes = $query->orderByDesc('id')->get();
+        return response()->json(['vacantes' => $vacantes]);
+    }
+
+    // Sugerir vacante a un pasante asignado
+    public function sugerirVacante(Request $request)
+    {
+        if ($this->esVicedecano($request)) {
+            return response()->json(['mensaje' => 'Acción no permitida en modo vista para Vicedecano.'], 403);
+        }
+        $request->validate([
+            'pasante_id' => 'required|integer',
+            'vacante_id' => 'required|integer'
+        ]);
+
+        $supervisor_id = $this->resolverSupervisorId($request->header('X-User-Id', 1));
+
+        // Verificar que el pasante pertenezca a este supervisor
+        $pasante = Pasante::where('id', $request->pasante_id)
+            ->where('supervisor_id', $supervisor_id)
+            ->first();
+
+        if (!$pasante) {
+            return response()->json(['mensaje' => 'El pasante especificado no está a su cargo.'], 403);
+        }
+
+        // Verificar que la vacante esté activa
+        $vacante = Vacante::where('id', $request->vacante_id)
+            ->where('estado', 'activa')
+            ->first();
+
+        if (!$vacante) {
+            return response()->json(['mensaje' => 'La vacante especificada no está activa o no existe.'], 404);
+        }
+
+        // Verificar si ya existe alguna sugerencia o postulación
+        $yaExiste = Postulacion::where('pasante_id', $request->pasante_id)
+            ->where('vacante_id', $request->vacante_id)
+            ->first();
+
+        if ($yaExiste) {
+            if ($yaExiste->estado === 'sugerida') {
+                return response()->json(['mensaje' => 'Esta vacante ya fue sugerida anteriormente a este pasante.'], 409);
+            }
+            return response()->json(['mensaje' => 'El pasante ya postuló o tiene un proceso iniciado para esta vacante.'], 409);
+        }
+
+        // Crear la postulación con estado 'sugerida'
+        Postulacion::create([
+            'pasante_id' => $request->pasante_id,
+            'vacante_id' => $request->vacante_id,
+            'estado' => 'sugerida'
+        ]);
+
+        return response()->json(['mensaje' => 'Vacante sugerida al pasante con éxito.']);
+    }
+
     // Obtener solicitudes de asignación de pasantes
     public function getSolicitudes(Request $request)
     {
+        $usuario = Usuario::find($request->header('X-User-Id'));
+        $esVicedecano = ($usuario && $usuario->rol === 'vice_decano');
         $supervisor_id = $this->resolverSupervisorId($request->header('X-User-Id', 1));
 
-        $solicitudes = DB::table('solicitudes_supervisor')
+        $query = DB::table('solicitudes_supervisor')
             ->join('pasantes', 'solicitudes_supervisor.pasante_id', '=', 'pasantes.id')
-            ->join('usuarios', 'pasantes.usuario_id', '=', 'usuarios.id')
-            ->where('solicitudes_supervisor.supervisor_id', $supervisor_id)
-            ->select(
+            ->join('usuarios', 'pasantes.usuario_id', '=', 'usuarios.id');
+
+        if (!$esVicedecano) {
+            $query->where('solicitudes_supervisor.supervisor_id', $supervisor_id);
+        }
+
+        $solicitudes = $query->select(
                 'solicitudes_supervisor.id',
                 'solicitudes_supervisor.mensaje',
                 'solicitudes_supervisor.estado',
@@ -339,6 +550,9 @@ class SupervisorController extends Controller
     // Responder solicitud de asignación
     public function responderSolicitud(Request $request, $id)
     {
+        if ($this->esVicedecano($request)) {
+            return response()->json(['mensaje' => 'Acción no permitida en modo vista para Vicedecano.'], 403);
+        }
         $request->validate(['decision' => 'required|in:aceptar,rechazar']);
 
         $usuario_id = $request->header('X-User-Id', 1);
@@ -371,13 +585,19 @@ class SupervisorController extends Controller
     // Obtener historial de recomendaciones
     public function getRecomendaciones(Request $request)
     {
+        $usuario = Usuario::find($request->header('X-User-Id'));
+        $esVicedecano = ($usuario && $usuario->rol === 'vice_decano');
         $supervisor_id = $this->resolverSupervisorId($request->header('X-User-Id', 1));
 
-        $recomendaciones = DB::table('recomendaciones')
+        $query = DB::table('recomendaciones')
             ->join('pasantes', 'recomendaciones.pasante_id', '=', 'pasantes.id')
-            ->join('usuarios', 'pasantes.usuario_id', '=', 'usuarios.id')
-            ->where('recomendaciones.supervisor_id', $supervisor_id)
-            ->select(
+            ->join('usuarios', 'pasantes.usuario_id', '=', 'usuarios.id');
+
+        if (!$esVicedecano) {
+            $query->where('recomendaciones.supervisor_id', $supervisor_id);
+        }
+
+        $recomendaciones = $query->select(
                 'recomendaciones.id',
                 'recomendaciones.tipo',
                 'recomendaciones.titulo',
@@ -405,6 +625,9 @@ class SupervisorController extends Controller
     // Crear carta de recomendacion
     public function crearRecomendacion(Request $request)
     {
+        if ($this->esVicedecano($request)) {
+            return response()->json(['mensaje' => 'Acción no permitida en modo vista para Vicedecano.'], 403);
+        }
         $request->validate([
             'pasante_id' => 'required|integer',
             'tipo' => 'required|string',
@@ -430,29 +653,49 @@ class SupervisorController extends Controller
     // Obtener estadísticas y actividades reales del supervisor
     public function getDashboard(Request $request)
     {
+        $usuario = Usuario::find($request->header('X-User-Id'));
+        $esVicedecano = ($usuario && $usuario->rol === 'vice_decano');
         $supervisor_id = $this->resolverSupervisorId($request->header('X-User-Id', 1));
         
-        // Pasantes de este supervisor
-        $pasantesQuery = Pasante::where('supervisor_id', $supervisor_id);
-        $pasantesIds = $pasantesQuery->pluck('id');
-        $usuarioIds = $pasantesQuery->pluck('usuario_id');
+        if ($esVicedecano) {
+            $pasantesPendientes = Pasante::where('estado', 'en_proceso')->count();
+            $cvsAprobados = CurriculumVitae::where('estado', 'validado')->count();
+            $vacantesActivas = Vacante::where('estado', 'activa')->count();
 
-        $pasantesPendientes = Pasante::where('supervisor_id', $supervisor_id)->where('estado', 'en_proceso')->count();
-        
-        $cvsAprobados = CurriculumVitae::whereIn('usuario_id', $usuarioIds)->where('estado', 'validado')->count();
-        
-        $vacantesActivas = Vacante::where('estado', 'activa')->count();
+            $informesRecientes = Informe::with('pasante.usuario')
+                ->orderByDesc('created_at')
+                ->take(5)
+                ->get();
+
+            $cvsRecientes = CurriculumVitae::with('usuario')
+                ->orderByDesc('updated_at')
+                ->take(5)
+                ->get();
+        } else {
+            $pasantesQuery = Pasante::where('supervisor_id', $supervisor_id);
+            $pasantesIds = $pasantesQuery->pluck('id');
+            $usuarioIds = $pasantesQuery->pluck('usuario_id');
+
+            $pasantesPendientes = Pasante::where('supervisor_id', $supervisor_id)->where('estado', 'en_proceso')->count();
+            $cvsAprobados = CurriculumVitae::whereIn('usuario_id', $usuarioIds)->where('estado', 'validado')->count();
+            $vacantesActivas = Vacante::where('estado', 'activa')->count();
+
+            $informesRecientes = Informe::with('pasante.usuario')
+                ->whereIn('pasante_id', $pasantesIds)
+                ->orderByDesc('created_at')
+                ->take(5)
+                ->get();
+
+            $cvsRecientes = CurriculumVitae::with('usuario')
+                ->whereIn('usuario_id', $usuarioIds)
+                ->orderByDesc('updated_at')
+                ->take(5)
+                ->get();
+        }
 
         // Obtener actividad reciente real
         $actividad = [];
 
-        // 1. Informes recientes
-        $informesRecientes = Informe::with('pasante.usuario')
-            ->whereIn('pasante_id', $pasantesIds)
-            ->orderByDesc('created_at')
-            ->take(5)
-            ->get();
-            
         foreach ($informesRecientes as $inf) {
             $estadoStr = '';
             if ($inf->estado === 'aprobado') {
@@ -472,13 +715,6 @@ class SupervisorController extends Controller
                 'timestamp' => $inf->created_at ? $inf->created_at->timestamp : 0
             ];
         }
-
-        // 2. CVs recientes
-        $cvsRecientes = CurriculumVitae::with('usuario')
-            ->whereIn('usuario_id', $usuarioIds)
-            ->orderByDesc('updated_at')
-            ->take(5)
-            ->get();
 
         foreach ($cvsRecientes as $cv) {
             $estadoStr = '';

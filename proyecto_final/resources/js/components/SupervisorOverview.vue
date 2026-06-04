@@ -291,8 +291,32 @@ const props = defineProps({
 .text-accent { color: #67000F !important; }
 
 @media (max-width: 768px) {
+  .welcome-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+    padding: 20px;
+  }
+  .welcome-crest {
+    display: none;
+  }
   .stats-grid { grid-template-columns: 1fr; }
   .area-row { grid-template-columns: 1fr; gap: 4px; }
   .area-label { margin-bottom: 2px; }
+}
+
+@media (max-width: 576px) {
+  .activity-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .activity-meta {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-left: 54px;
+  }
 }
 </style>

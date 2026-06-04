@@ -5,7 +5,7 @@
     <!-- VISTA PRINCIPAL: HISTORIAL DE INFORMES         -->
     <!-- ============================================== -->
     <div v-if="!vistaCreacion" class="historial-container">
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <h4 class="fw-bold m-0"><i class="bi bi-journal-text text-primary"></i> Mis Informes</h4>
         <button class="btn btn-accent px-4 py-2" @click="vistaCreacion = true">
           <i class="bi bi-plus-circle me-2"></i>Crear Nuevo Informe
@@ -83,10 +83,10 @@
     <!-- ============================================== -->
     <div v-else class="creacion-container animate-fade-in">
       <div class="dashboard-section-card max-w-900 mx-auto">
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 border-bottom pb-3">
           <h4 class="fw-bold m-0"><i class="bi bi-pencil-square text-accent"></i> {{ editandoId ? 'Editar Informe' : 'Redactar Nuevo Informe' }}</h4>
           <div class="action-buttons d-flex gap-2">
-            <button class="btn btn-outline-secondary" @click="cerrarFormulario"><i class="bi bi-arrow-left me-1"></i> Atrás</button>
+            <button class="btn-ds-back-outline" @click="cerrarFormulario"><i class="bi bi-arrow-left me-1"></i> Atrás</button>
           </div>
         </div>
 
@@ -107,7 +107,8 @@
               <label class="form-label fw-bold">Horas a Reportar</label>
               <input
                 type="number"
-                min="1"
+                min="0.01"
+                step="0.01"
                 max="600"
                 class="form-control form-control-lg"
                 :class="{ 'is-invalid': horasError }"
@@ -116,7 +117,7 @@
                 required
                 @input="horasError = false"
               >
-              <div class="invalid-feedback" v-if="horasError">Debes ingresar las horas (mín. 1).</div>
+              <div class="invalid-feedback" v-if="horasError">Debes ingresar las horas (mín. 0.01).</div>
             </div>
           </div>
 
@@ -292,9 +293,9 @@ const eliminarInforme = (id) => {
 const guardarInforme = async () => {
   // Validacion de horas en el cliente
   const horas = Number(nuevoInforme.value.horas);
-  if (!horas || horas < 1) {
+  if (!horas || horas < 0.01) {
     horasError.value = true;
-    alertify.error('Debes ingresar las horas del informe (mínimo 1).');
+    alertify.error('Debes ingresar las horas del informe (mínimo 0.01).');
     return;
   }
 

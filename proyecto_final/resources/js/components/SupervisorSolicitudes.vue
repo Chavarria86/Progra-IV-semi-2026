@@ -1,7 +1,7 @@
 <template>
   <div class="solicitudes-view animate-fade-in">
     <div class="dashboard-section-card">
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <h5 class="card-title m-0"><i class="bi bi-person-plus-fill text-primary"></i> Gestión de Solicitudes</h5>
       </div>
       
@@ -42,9 +42,12 @@
               <p class="small text-muted mb-0 fst-italic">"{{ sol.mensaje }}"</p>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
               <small class="text-muted"><i class="bi bi-calendar3 me-1"></i> Enviado: {{ sol.fecha }}</small>
-              <div class="d-flex gap-2">
+              <div v-if="usuario.rol === 'vice_decano'" class="badge bg-info text-dark px-3 py-2 small">
+                <i class="bi bi-info-circle-fill me-1"></i> Modo Vista
+              </div>
+              <div v-else class="d-flex gap-2">
                 <button class="btn btn-sm btn-outline-danger" @click="responderAsignacion(sol, 'rechazar')" :disabled="procesando === sol.id">
                   <i class="bi bi-x-circle me-1"></i> Rechazar
                 </button>
@@ -81,7 +84,10 @@
 
             <div class="d-flex justify-content-between align-items-center mt-4">
               <small class="text-muted"><i class="bi bi-calendar3 me-1"></i> Postulado: {{ post.fecha }}</small>
-              <div class="d-flex gap-2">
+              <div v-if="usuario.rol === 'vice_decano'" class="badge bg-info text-dark px-3 py-2 small">
+                <i class="bi bi-info-circle-fill me-1"></i> Modo Vista
+              </div>
+              <div v-else class="d-flex gap-2">
                 <button class="btn btn-sm btn-outline-danger" @click="responderPostulacion(post, 'rechazar')" :disabled="procesando === post.id">
                   <i class="bi bi-x-circle me-1"></i> Rechazar
                 </button>
@@ -229,4 +235,25 @@ const responderPostulacion = async (post, decision) => {
   letter-spacing: 0.5px; color: #64748b; padding: 14px 16px;
 }
 .custom-table td { padding: 14px 16px; }
+
+@media (max-width: 768px) {
+  .nav-tabs {
+    flex-direction: column;
+    width: 100%;
+    border-bottom: none;
+    gap: 8px;
+  }
+  .nav-item {
+    width: 100%;
+  }
+  .nav-link {
+    text-align: center;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 8px !important;
+  }
+  .nav-link.active {
+    background-color: #001374 !important;
+    color: white !important;
+  }
+}
 </style>

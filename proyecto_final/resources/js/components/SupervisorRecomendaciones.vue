@@ -3,9 +3,9 @@
 
     <!-- VISTA: Lista de Recomendaciones -->
     <div v-if="!modoEscritura">
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <h4 class="fw-bold m-0"><i class="bi bi-award-fill text-primary"></i> Recomendaciones para Pasantes</h4>
-        <button class="btn btn-accent px-4" @click="modoEscritura = true; limpiarForm()">
+        <button v-if="usuario.rol !== 'vice_decano'" class="btn btn-accent px-4" @click="modoEscritura = true; limpiarForm()">
           <i class="bi bi-plus-circle me-2"></i> Nueva Recomendación
         </button>
       </div>
@@ -20,12 +20,13 @@
 
         <div v-else-if="recomendaciones.length === 0" class="text-center py-5 bg-light rounded border text-muted">
           <i class="bi bi-award d-block fs-1 mb-3 text-secondary"></i>
-          <span>No has emitido recomendaciones todavía. Haz clic en "Nueva Recomendación" para empezar.</span>
+          <span v-if="usuario.rol === 'vice_decano'">No se encontraron recomendaciones registradas.</span>
+          <span v-else>No has emitido recomendaciones todavía. Haz clic en "Nueva Recomendación" para empezar.</span>
         </div>
 
         <div v-else class="recs-grid">
           <div v-for="rec in recomendaciones" :key="rec.id" class="rec-card border rounded p-4 mb-3">
-            <div class="d-flex justify-content-between align-items-start">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
               <div>
                 <h6 class="fw-bold text-dark mb-1"><i class="bi bi-person-circle text-primary me-2"></i>{{ rec.pasante }}</h6>
                 <p class="text-muted small mb-2">{{ rec.titulo }}</p>
@@ -44,10 +45,10 @@
     <!-- VISTA: Formulario de Escritura -->
     <div v-else class="animate-fade-in">
       <div class="dashboard-section-card max-w-800 mx-auto">
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 border-bottom pb-3">
           <h4 class="fw-bold m-0"><i class="bi bi-pencil-square text-accent"></i> Redactar Recomendación</h4>
           <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary" @click="modoEscritura = false"><i class="bi bi-arrow-left me-1"></i> Atrás</button>
+            <button class="btn-ds-back-outline" @click="modoEscritura = false"><i class="bi bi-arrow-left me-1"></i> Atrás</button>
             <button class="btn btn-outline-danger" @click="modoEscritura = false"><i class="bi bi-x-circle me-1"></i> Cerrar</button>
           </div>
         </div>

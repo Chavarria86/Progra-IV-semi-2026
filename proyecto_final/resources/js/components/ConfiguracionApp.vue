@@ -6,12 +6,24 @@
       <div class="mt-4">
         <h6 class="border-bottom pb-2">Preferencias del Sistema</h6>
         <div class="form-check form-switch mt-3">
-          <input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" checked />
-          <label class="form-check-label font-weight-medium" for="flexSwitchCheckDefault">Recibir notificaciones por correo electrónico</label>
+          <input class="form-check-input" type="checkbox" id="emailNotif" checked />
+          <label class="form-check-label font-weight-medium" for="emailNotif">Recibir notificaciones por correo electrónico</label>
         </div>
         <div class="form-check form-switch mt-2">
-          <input class="form-check-input" type="checkbox" id="flexSwitchCheckChecked" />
-          <label class="form-check-label font-weight-medium" for="flexSwitchCheckChecked">Modo de ahorro de datos para descargas PDF</label>
+          <input class="form-check-input" type="checkbox" id="dataSaving" />
+          <label class="form-check-label font-weight-medium" for="dataSaving">Modo de ahorro de datos para descargas PDF</label>
+        </div>
+
+        <!-- MODO OSCURO SWITCH -->
+        <div class="form-check form-switch mt-2">
+          <input 
+            class="form-check-input" 
+            type="checkbox" 
+            id="darkModeSwitch" 
+            v-model="localDark" 
+            @change="toggleDarkMode" 
+          />
+          <label class="form-check-label font-weight-medium" for="darkModeSwitch">Modo Oscuro</label>
         </div>
       </div>
 
@@ -25,7 +37,7 @@
           <label class="form-label font-weight-bold">Nueva Contraseña</label>
           <input type="password" class="form-control" />
         </div>
-        <button class="btn-primary-custom mt-2" @click="alertify.success('Ajustes de seguridad actualizados con éxito.')">
+        <button class="btn-primary-custom mt-2" @click="guardarCambios">
           Guardar cambios
         </button>
       </div>
@@ -34,6 +46,27 @@
 </template>
 
 <script setup>
+import { ref, watch } from 'vue';
+
+const props = defineProps({
+  isDark: { type: Boolean, default: false }
+});
+
+const emit = defineEmits(['toggleDarkMode']);
+
+const localDark = ref(props.isDark);
+
+watch(() => props.isDark, (val) => {
+  localDark.value = val;
+});
+
+const toggleDarkMode = () => {
+  emit('toggleDarkMode');
+};
+
+const guardarCambios = () => {
+  alertify.success('Ajustes de seguridad actualizados con éxito.');
+};
 </script>
 
 <style scoped>
@@ -50,7 +83,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Cards global styling */
 .dashboard-section-card {
   background-color: #ffffff;
   border-radius: 12px;
@@ -106,5 +138,11 @@
 .form-check-input:checked {
   background-color: #001374;
   border-color: #001374;
+}
+
+/* Dark mode overrides for internal elements */
+:deep(.dark-mode) .form-check-input:checked {
+  background-color: #00E5FF !important;
+  border-color: #00E5FF !important;
 }
 </style>

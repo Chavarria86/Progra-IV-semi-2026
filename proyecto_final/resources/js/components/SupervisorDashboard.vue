@@ -16,6 +16,11 @@
       @validar="ejecutarValidacionCv"
     />
 
+    <SupervisorSugerirVacante
+      v-else-if="seccionActiva === 'ver_vacantes'"
+      :usuario="usuario"
+    />
+
     <SupervisorEvaluarInformes
       v-else-if="seccionActiva === 'evaluar_informes'"
       :usuario="usuario"
@@ -88,7 +93,7 @@
                 <th>Área</th>
                 <th>Fase Actual</th>
                 <th>Estado</th>
-                <th class="text-end">Acciones</th>
+                <th v-if="usuario.rol !== 'vice_decano'" class="text-end">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -104,7 +109,7 @@
                 <td>
                   <span class="estado-badge" :class="'estado-' + p.estado">{{ estadoTexto(p.estado) }}</span>
                 </td>
-                <td class="text-end">
+                <td v-if="usuario.rol !== 'vice_decano'" class="text-end">
                   <div class="dropdown">
                     <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                       Acciones <i class="bi bi-chevron-down ms-1"></i>
@@ -146,6 +151,7 @@ import SupervisorAsignarVacante from './SupervisorAsignarVacante.vue';
 import SupervisorEvaluarInformes from './SupervisorEvaluarInformes.vue';
 import SupervisorSolicitudes from './SupervisorSolicitudes.vue';
 import SupervisorRecomendaciones from './SupervisorRecomendaciones.vue';
+import SupervisorSugerirVacante from './SupervisorSugerirVacante.vue';
 
 const props = defineProps({ seccionActiva: String });
 

@@ -35,6 +35,11 @@
               <span class="area-chip" :class="'area-' + v.area">{{ v.area }}</span>
             </div>
             <p class="vacante-descripcion">{{ v.descripcion }}</p>
+            <div v-if="esSugerida(v.id)" class="mb-3">
+              <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 small rounded-pill">
+                <i class="bi bi-lightbulb-fill text-warning me-1"></i> Sugerida por tu supervisor
+              </span>
+            </div>
             <div class="vacante-card-footer">
               <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>{{ formatearFecha(v.created_at) }}</small>
               <div v-if="yaAplico(v.id)" class="aplicada-badge">
@@ -55,12 +60,12 @@
       <div class="col-md-5 mb-4">
         <div class="dashboard-section-card h-100">
           <h5 class="card-title"><i class="bi bi-list-check text-primary"></i> Mis Postulaciones</h5>
-          <div v-if="postulaciones.length === 0" class="text-center py-4 text-muted">
+          <div v-if="postulacionesFiltradas.length === 0" class="text-center py-4 text-muted">
             <i class="bi bi-inbox-fill d-block fs-2 mb-2"></i>
             <span>Aún no has aplicado a ninguna vacante.</span>
           </div>
           <div v-else class="postulaciones-lista mt-3">
-            <div v-for="p in postulaciones" :key="p.id" class="postulacion-item">
+            <div v-for="p in postulacionesFiltradas" :key="p.id" class="postulacion-item">
               <div class="postulacion-empresa">{{ p.empresa }}</div>
               <div class="postulacion-area">{{ p.area }}</div>
               <div class="postulacion-cv" v-if="p.cv_titulo">
@@ -77,7 +82,7 @@
     <!-- ═══ MODAL DE SELECCIÓN DE CV ═══════════════════════════════ -->
     <div v-if="modalCvAbierto" class="modal-overlay" @click.self="cerrarModalCv">
       <div class="modal-cv-panel animate-fade-in">
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 border-bottom pb-3">
           <div>
             <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-person text-primary me-2"></i>Seleccionar CV para Postularse</h5>
             <p class="text-muted small mb-0 mt-1">Vacante: <strong>{{ vacanteSeleccionada?.empresa }}</strong> &mdash; {{ vacanteSeleccionada?.area }}</p>
@@ -135,7 +140,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
@@ -149,6 +154,10 @@ const cargandoVacantes = ref(false);
 const filtroArea = ref('');
 const aplicando = ref(false);
 const postulaciones = ref([]);
+
+const postulacionesFiltradas = computed(() => {
+  return postulaciones.value.filter(p => p.estado !== 'sugerida');
+});
 
 // ── Modal de selección de CV ──
 const modalCvAbierto = ref(false);
@@ -228,7 +237,11 @@ const cambiarFiltro = (area) => {
 };
 
 const yaAplico = (vacanteId) => {
-  return postulaciones.value.some(p => p.vacante_id === vacanteId);
+  return postulaciones.value.some(p => p.vacante_id === vacanteId && p.estado !== 'sugerida');
+};
+
+const esSugerida = (vacanteId) => {
+  return postulaciones.value.some(p => p.vacante_id === vacanteId && p.estado === 'sugerida');
 };
 
 const abrirModalCv = (vacante) => {

@@ -17,14 +17,14 @@
         // Configuración global de AlertifyJS para los Dashboards
         document.addEventListener('DOMContentLoaded', function() {
             alertify.set('notifier','position', 'top-right');
-            alertify.defaults.theme.ok = "btn btn-primary";
-            alertify.defaults.theme.cancel = "btn btn-danger";
+            alertify.defaults.theme.ok = "btn btn-alertify-ok";
+            alertify.defaults.theme.cancel = "btn btn-alertify-cancel";
         });
     </script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-light">
+<body style="background-color: #F4F4F4;">
     <div id="app"></div>
 </body>
 </html>

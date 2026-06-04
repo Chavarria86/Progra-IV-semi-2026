@@ -4,14 +4,17 @@
       <!-- Formulario de Validación -->
       <div :class="selectedCv ? 'col-lg-5 mb-4' : 'col-12'">
         <div class="dashboard-section-card">
-          <h5 class="card-title"><i class="bi bi-check2-square text-warning"></i> Validar CV de Pasante</h5>
+          <h5 class="card-title">
+            <span v-if="usuario.rol === 'vice_decano'"><i class="bi bi-file-earmark-person-fill text-primary"></i> Consultar CVs de Pasantes</span>
+            <span v-else><i class="bi bi-check2-square text-warning"></i> Validar CV de Pasante</span>
+          </h5>
           <form @submit.prevent="submitValidacion" class="mt-3">
             <div class="form-group-custom">
               <label>Seleccionar Pasante</label>
               <select class="form-select-custom" v-model="cvForm.pasante_id" required :disabled="cargandoCvs" @change="onCvChange">
-                <option value="" disabled>{{ cargandoCvs ? 'Cargando CVs pendientes...' : (cvsPendientes.length === 0 ? 'No hay CVs pendientes' : 'Seleccione un pasante pendiente') }}</option>
+                <option value="" disabled>{{ cargandoCvs ? 'Cargando CVs...' : (cvsPendientes.length === 0 ? 'No hay CVs' : 'Seleccione un pasante') }}</option>
                 <option v-for="cv in cvsPendientes" :key="cv.id" :value="cv.id">
-                  {{ cv.nombre_pasante }} — {{ cv.titulo }} ({{ cv.fecha_subida }})
+                  {{ cv.nombre_pasante }} — {{ cv.titulo }} <template v-if="usuario.rol === 'vice_decano'">({{ estadoTexto(cv.estado) }})</template> ({{ cv.fecha_subida }})
                 </option>
               </select>
             </div>
@@ -35,7 +38,10 @@
               <textarea class="form-textarea-custom" rows="3" v-model="cvForm.comentarios"
                 placeholder="Especifique qué debe corregir el pasante en su CV..." required></textarea>
             </div>
-            <button type="submit" class="btn-primary-custom w-100 mt-2" :disabled="cargandoCV">
+            <div v-if="usuario.rol === 'vice_decano'" class="alert alert-info py-2 px-3 small mb-3">
+              <i class="bi bi-info-circle-fill me-1"></i> Modo Vista: El Vicedecano solo puede visualizar los CVs sin realizar acciones.
+            </div>
+            <button type="submit" class="btn-primary-custom w-100 mt-2" :disabled="cargandoCV || usuario.rol === 'vice_decano'">
               <span v-if="cargandoCV" class="spinner-border spinner-border-sm me-2"></span>
               <i v-else class="bi bi-send-check me-1"></i>
               Procesar Validación
@@ -47,7 +53,7 @@
       <!-- Previsualización del CV Seleccionado -->
       <div v-if="selectedCv" class="col-lg-7">
         <div class="dashboard-section-card d-flex flex-column" style="min-height: 600px;">
-          <h5 class="card-title mb-3 d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <span><i class="bi bi-file-pdf-fill text-danger"></i> Currículum de {{ selectedCv.nombre_pasante }}</span>
             <a :href="selectedCv.url_publica" target="_blank" class="btn-primary-custom px-3 py-1" style="font-size:12px; height:auto;">
               <i class="bi bi-box-arrow-up-right me-1"></i> Ver Pantalla Completa
@@ -77,6 +83,13 @@ const cvForm = ref({ pasante_id: '', estado: 'aprobado', comentarios: '' });
 const cvsPendientes = ref([]);
 const cargandoCvs = ref(true);
 const selectedCv = ref(null);
+
+const estadoTexto = (estado) => {
+  if (estado === 'activo') return 'Pendiente';
+  if (estado === 'validado') return 'Aprobado';
+  if (estado === 'rechazado') return 'Rechazado';
+  return estado;
+};
 
 onMounted(() => {
   cargarCvsPendientes();

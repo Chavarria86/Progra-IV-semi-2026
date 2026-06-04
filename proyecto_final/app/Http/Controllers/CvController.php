@@ -53,6 +53,7 @@ class CvController extends Controller
             'ruta_archivo'     => $ruta,
             'url_publica'      => $urlPublica,
             'nombre_completo'  => $request->perfil['nombre']          ?? null,
+            'profesion'        => $request->perfil['profesion']       ?? null,
             'direccion'        => $request->perfil['direccion']        ?? null,
             'email'            => $request->perfil['email']            ?? null,
             'telefono'         => $request->perfil['telefono']         ?? null,

@@ -1,98 +1,69 @@
 <template>
   <div class="perfil-view animate-fade-in">
-    <div class="row">
-      <!-- Formulario de perfil -->
-      <div class="col-md-5 mb-4">
-        <div class="dashboard-section-card h-100">
-          <h5 class="card-title"><i class="bi bi-person-fill text-primary"></i> Información Personal</h5>
-          <div class="perfil-form-fields mt-3">
-            <div class="form-group-custom">
-              <label>Nombres:</label>
-              <div class="input-display">{{ usuario.nombres || 'Cargando...' }}</div>
-            </div>
-            <div class="form-group-custom">
-              <label>Apellidos:</label>
-              <div class="input-display">{{ usuario.apellidos || 'Cargando...' }}</div>
-            </div>
-            <div class="form-group-custom">
-              <label>Correo Institucional:</label>
-              <div class="input-display">{{ usuario.correo || 'Cargando...' }}</div>
-            </div>
-            <div class="form-group-custom">
-              <label><i class="bi bi-link-45deg"></i> Enlace de Portafolio / Repo:</label>
-              <input type="url" class="form-control-custom" placeholder="https://github.com/tu-usuario" />
-            </div>
-          </div>
+    <!-- Currículums creados -->
+    <div class="dashboard-section-card">
+      <div class="cv-section-header">
+        <h5 class="card-title m-0"><i class="bi bi-file-earmark-pdf-fill text-danger"></i> Mis Currículums</h5>
+        <button class="btn-crear-cv" @click="$emit('abrirWizard')">
+          <i class="bi bi-plus-lg me-1"></i> Crear nuevo
+        </button>
+      </div>
+
+      <!-- Buscador de CVs (visible si hay CVs creados) -->
+      <div v-if="cvs.length > 0" class="cv-search-bar mt-3 mb-2">
+        <div class="input-group-custom position-relative">
+          <input 
+            type="text" 
+            class="form-control-custom ps-5" 
+            placeholder="Buscar en mis CVs (título, perfil, habilidades, logros...)" 
+            v-model="filtroBusqueda"
+          />
+          <i class="bi bi-search position-absolute" style="left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 16px;"></i>
         </div>
       </div>
 
-      <!-- Currículums creados -->
-      <div class="col-md-7 mb-4">
-        <div class="dashboard-section-card h-100">
-          <div class="cv-section-header">
-            <h5 class="card-title m-0"><i class="bi bi-file-earmark-pdf-fill text-danger"></i> Mis Currículums</h5>
-            <button class="btn-crear-cv" @click="$emit('abrirWizard')">
-              <i class="bi bi-plus-lg me-1"></i> Crear nuevo
+      <!-- Loading cvs -->
+      <div v-if="cargandoCvs" class="cv-loading mt-4">
+        <span class="spinner-border spinner-border-sm me-2 text-primary"></span> Cargando documentos...
+      </div>
+
+      <!-- Lista vacía por falta de CVs -->
+      <div v-else-if="cvs.length === 0" class="cv-empty-state mt-4">
+        <i class="bi bi-file-earmark-x cv-empty-icon"></i>
+        <p class="cv-status-text text-danger font-weight-bold">Aún no has creado ningún currículum</p>
+        <p class="cv-hint">Haz clic en "Crear nuevo" para empezar a generar tu hoja de vida profesional.</p>
+      </div>
+
+      <!-- Lista vacía por filtro de búsqueda -->
+      <div v-else-if="cvsFiltrados.length === 0" class="cv-empty-state mt-4">
+        <i class="bi bi-search cv-empty-icon text-muted"></i>
+        <p class="cv-status-text text-muted font-weight-bold">No se encontraron resultados</p>
+        <p class="cv-hint">Prueba con otros términos o limpia el campo de búsqueda.</p>
+      </div>
+
+      <!-- Lista de CVs -->
+      <div v-else class="cv-lista mt-3">
+        <div v-for="cv in cvsFiltrados" :key="cv.id" class="cv-card">
+          <div class="cv-card-icon">
+            <i class="bi bi-file-earmark-pdf-fill"></i>
+          </div>
+          <div class="cv-card-info">
+            <p class="cv-card-titulo">{{ cv.titulo_cv || 'Mi CV' }}</p>
+            <p class="cv-card-fecha">Creado: {{ formatearFecha(cv.created_at) }}</p>
+          </div>
+          <div class="cv-card-acciones">
+            <a v-if="cv.url_publica" :href="cv.url_publica" target="_blank" class="btn-accion btn-ver" title="Ver PDF">
+              <i class="bi bi-eye"></i>
+            </a>
+            <a v-if="cv.url_publica" :href="cv.url_publica" download class="btn-accion btn-descargar" title="Descargar PDF">
+              <i class="bi bi-download"></i>
+            </a>
+            <button class="btn-accion btn-editar" title="Editar CV" @click="$emit('editarCv', cv)">
+              <i class="bi bi-pencil"></i>
             </button>
-          </div>
-
-          <!-- Buscador de CVs (visible si hay CVs creados) -->
-          <div v-if="cvs.length > 0" class="cv-search-bar mt-3 mb-2">
-            <div class="input-group-custom position-relative">
-              <input 
-                type="text" 
-                class="form-control-custom ps-5" 
-                placeholder="Buscar en mis CVs (título, perfil, habilidades, logros...)" 
-                v-model="filtroBusqueda"
-              />
-              <i class="bi bi-search position-absolute" style="left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 16px;"></i>
-            </div>
-          </div>
-
-          <!-- Loading cvs -->
-          <div v-if="cargandoCvs" class="cv-loading mt-4">
-            <span class="spinner-border spinner-border-sm me-2 text-primary"></span> Cargando documentos...
-          </div>
-
-          <!-- Lista vacía por falta de CVs -->
-          <div v-else-if="cvs.length === 0" class="cv-empty-state mt-4">
-            <i class="bi bi-file-earmark-x cv-empty-icon"></i>
-            <p class="cv-status-text text-danger font-weight-bold">Aún no has creado ningún currículum</p>
-            <p class="cv-hint">Haz clic en "Crear nuevo" para empezar a generar tu hoja de vida profesional.</p>
-          </div>
-
-          <!-- Lista vacía por filtro de búsqueda -->
-          <div v-else-if="cvsFiltrados.length === 0" class="cv-empty-state mt-4">
-            <i class="bi bi-search cv-empty-icon text-muted"></i>
-            <p class="cv-status-text text-muted font-weight-bold">No se encontraron resultados</p>
-            <p class="cv-hint">Prueba con otros términos o limpia el campo de búsqueda.</p>
-          </div>
-
-          <!-- Lista de CVs -->
-          <div v-else class="cv-lista mt-3">
-            <div v-for="cv in cvsFiltrados" :key="cv.id" class="cv-card">
-              <div class="cv-card-icon">
-                <i class="bi bi-file-earmark-pdf-fill"></i>
-              </div>
-              <div class="cv-card-info">
-                <p class="cv-card-titulo">{{ cv.titulo_cv || 'Mi CV' }}</p>
-                <p class="cv-card-fecha">Creado: {{ formatearFecha(cv.created_at) }}</p>
-              </div>
-              <div class="cv-card-acciones">
-                <a v-if="cv.url_publica" :href="cv.url_publica" target="_blank" class="btn-accion btn-ver" title="Ver PDF">
-                  <i class="bi bi-eye"></i>
-                </a>
-                <a v-if="cv.url_publica" :href="cv.url_publica" download class="btn-accion btn-descargar" title="Descargar PDF">
-                  <i class="bi bi-download"></i>
-                </a>
-                <button class="btn-accion btn-editar" title="Editar CV" @click="$emit('editarCv', cv)">
-                  <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn-accion btn-eliminar" title="Eliminar" @click="$emit('eliminarCv', cv.id)">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </div>
-            </div>
+            <button class="btn-accion btn-eliminar" title="Eliminar" @click="$emit('eliminarCv', cv.id)">
+              <i class="bi bi-trash"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -365,5 +336,17 @@ const formatearFecha = (fecha) => {
 }
 .ps-5 {
   padding-left: 42px !important;
+}
+
+@media (max-width: 576px) {
+  .cv-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .cv-card-acciones {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 </style>

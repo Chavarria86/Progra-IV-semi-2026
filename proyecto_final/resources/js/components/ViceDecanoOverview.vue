@@ -229,4 +229,21 @@ defineEmits(['toggleDark']);
   .stats-row { grid-template-columns: 1fr; }
   .hero-svg { width: 70%; opacity: 0.4; }
 }
+
+@media (max-width: 576px) {
+  .hero-logo {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+  .activity-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+  .activity-tag {
+    align-self: flex-start;
+  }
+}
 </style>

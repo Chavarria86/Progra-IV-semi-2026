@@ -472,4 +472,38 @@ const getStepStatus = (stepPhase) => {
   display: flex;
   align-items: center;
 }
+
+@media (max-width: 768px) {
+  .welcome-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+    padding: 20px;
+  }
+  .welcome-crest {
+    display: none;
+  }
+  .stepper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .step {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    width: 100%;
+    gap: 16px;
+  }
+  .step-content {
+    margin-top: 0;
+  }
+  .step-line {
+    display: none;
+  }
+  .quick-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
 </style>

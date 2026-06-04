@@ -1,16 +1,16 @@
 <template>
   <div class="cv-wizard-overlay">
-    <div class="cv-wizard-wrapper">
+    <div class="cv-wizard-wrapper" :class="{ 'preview-mode': paso === 5 }">
 
       <!-- ===== HEADER ===== -->
       <div class="wiz-header">
-        <div class="wiz-header-inner">
+        <div class="wiz-header-inner" :class="{ 'preview-mode': paso === 5 }">
           <span v-if="paso === 0">Bienvenido a Génesis Profesional — Completa tu perfil profesional</span>
           <span v-else-if="paso === 1">Paso 1: Configuración del diseño</span>
           <span v-else-if="paso === 2">Paso 2: Información de Perfil</span>
           <span v-else-if="paso === 3">Paso 3: Objetivos y valores</span>
           <span v-else-if="paso === 4">Paso 4: Logros</span>
-          <span v-else>Vista previa de tu CV</span>
+          <span v-else>Tu perfil ya casi está listo.</span>
           <!-- Botón cerrar / volver al dashboard siempre visible -->
           <button class="btn-cerrar-wizard" @click="confirmarSalida" title="Volver al Dashboard">
             <i class="bi bi-x-lg"></i>
@@ -49,9 +49,6 @@
           <p class="nombre-cv-hint">Este nombre te ayudará a identificarlo entre varios currículums guardados.</p>
         </div>
 
-        <div class="intro-img-wrap">
-          <img src="https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&q=80" alt="CV" class="intro-img" />
-        </div>
       </div>
 
       <!-- ===== PASO 1: DISEÑO ===== -->
@@ -117,6 +114,10 @@
           <div class="field-group">
             <label><i class="bi bi-person"></i> Nombre completo:</label>
             <input class="wiz-input" v-model="perfil.nombre" placeholder="Tu nombre completo" />
+          </div>
+          <div class="field-group">
+            <label><i class="bi bi-briefcase"></i> Título profesional / Especialidad:</label>
+            <input class="wiz-input" v-model="perfil.profesion" placeholder="Ej: Egresada de Ingeniería en sistemas..." />
           </div>
           <div class="field-group">
             <label><i class="bi bi-geo-alt"></i> Dirección:</label>
@@ -189,62 +190,153 @@
 
       <!-- ===== PASO 5: PREVIEW ===== -->
       <div class="wiz-body preview-body" v-else-if="paso === 5">
-        <div class="preview-titulo-badge">
-          <i class="bi bi-tag-fill me-1"></i> {{ tituloCv || 'Mi CV' }}
-        </div>
-        <div id="cv-preview-render" class="cv-full-preview" :style="{ fontFamily: diseno.fuente, '--cv-color': diseno.color }">
-          <!-- Sidebar izquierdo -->
-          <div class="cvp-left" :style="{ backgroundColor: diseno.color }">
-            <div class="cvp-foto-wrap">
-              <img v-if="perfil.fotoUrl" :src="perfil.fotoUrl" class="cvp-foto" />
-              <div v-else class="cvp-foto-placeholder"><i class="bi bi-person-fill"></i></div>
+        <div class="preview-main-title">Vista previa</div>
+        
+        <div class="preview-container">
+          <div id="cv-preview-render" class="cv-full-preview" :style="{ fontFamily: diseno.fuente, '--cv-color': diseno.color }">
+            <!-- CABECERA DE ANCHO COMPLETO -->
+            <div class="cvp-header" :style="{ backgroundColor: diseno.color }">
+              <div class="cvp-header-foto-wrap">
+                <img v-if="perfil.fotoUrl" :src="perfil.fotoUrl" class="cvp-header-foto" />
+                <div v-else class="cvp-header-foto-placeholder"><i class="bi bi-person-fill"></i></div>
+              </div>
+              <div class="cvp-header-text">
+                <h1 class="cvp-name">{{ perfil.nombre || 'Tu Nombre' }}</h1>
+                <p class="cvp-subtitle">{{ perfil.profesion || 'Tu Título Profesional / Especialidad' }}</p>
+              </div>
             </div>
-            <div class="cvp-name">{{ perfil.nombre || 'Tu Nombre' }}</div>
 
-            <div class="cvp-section-title">CONTACTO</div>
-            <div class="cvp-item" v-if="perfil.direccion"><i class="bi bi-geo-alt"></i> {{ perfil.direccion }}</div>
-            <div class="cvp-item" v-if="perfil.telefono"><i class="bi bi-telephone"></i> {{ perfil.telefono }}</div>
-            <div class="cvp-item" v-if="perfil.email"><i class="bi bi-envelope"></i> {{ perfil.email }}</div>
+            <!-- CUERPO DE DOS COLUMNAS -->
+            <div class="cvp-content">
+              <!-- COLUMNA IZQUIERDA -->
+              <div class="cvp-column left-column">
+                <!-- Contacto -->
+                <div class="cvp-contact-info">
+                  <div class="cvp-contact-item" v-if="perfil.direccion">
+                    <i class="bi bi-geo-alt-fill" :style="{ color: diseno.color }"></i>
+                    <span class="cvp-contact-label" :style="{ color: diseno.color }">Dirección:</span>
+                    <span class="cvp-contact-val">{{ perfil.direccion }}</span>
+                  </div>
+                  <div class="cvp-contact-item" v-if="perfil.email">
+                    <i class="bi bi-envelope-fill" :style="{ color: diseno.color }"></i>
+                    <span class="cvp-contact-label" :style="{ color: diseno.color }">Email:</span>
+                    <span class="cvp-contact-val">{{ perfil.email }}</span>
+                  </div>
+                  <div class="cvp-contact-item" v-if="perfil.telefono">
+                    <i class="bi bi-telephone-fill" :style="{ color: diseno.color }"></i>
+                    <span class="cvp-contact-label" :style="{ color: diseno.color }">Teléfono:</span>
+                    <span class="cvp-contact-val">{{ perfil.telefono }}</span>
+                  </div>
+                </div>
 
-            <div class="cvp-section-title mt">IDIOMAS</div>
-            <div class="cvp-pre">{{ objetivos.idiomas }}</div>
+                <!-- Sobre Mí -->
+                <div class="cvp-section" v-if="perfil.sobreMi">
+                  <h3 class="cvp-section-title" :style="{ color: diseno.color }">
+                    <i class="bi bi-file-earmark-person-fill"></i> Sobre mí:
+                  </h3>
+                  <p class="cvp-section-text">{{ perfil.sobreMi }}</p>
+                </div>
 
-            <div class="cvp-section-title mt">HABILIDADES</div>
-            <div class="cvp-pre">{{ logros.habilidades }}</div>
+                <!-- Conocimientos -->
+                <div class="cvp-section" v-if="objetivos.conocimientos">
+                  <h3 class="cvp-section-title" :style="{ color: diseno.color }">
+                    <i class="bi bi-brain-fill"></i> Conocimientos:
+                  </h3>
+                  <p class="cvp-section-text pre">{{ objetivos.conocimientos }}</p>
+                </div>
+
+                <!-- Mi Objetivo -->
+                <div class="cvp-section" v-if="objetivos.objetivo">
+                  <h3 class="cvp-section-title" :style="{ color: diseno.color }">
+                    <i class="bi bi-bullseye"></i> Mi objetivo:
+                  </h3>
+                  <p class="cvp-section-text">{{ objetivos.objetivo }}</p>
+                </div>
+
+                <!-- Certificados -->
+                <div class="cvp-section" v-if="logros.certificados">
+                  <h3 class="cvp-section-title" :style="{ color: diseno.color }">
+                    <i class="bi bi-award-fill"></i> Certificados:
+                  </h3>
+                  <p class="cvp-section-text pre">{{ logros.certificados }}</p>
+                </div>
+
+                <!-- Proyectos de beneficio social -->
+                <div class="cvp-section" v-if="logros.proyectos">
+                  <h3 class="cvp-section-title" :style="{ color: diseno.color }">
+                    <i class="bi bi-heart-fill"></i> Proyectos de beneficio social:
+                  </h3>
+                  <p class="cvp-section-text pre">{{ logros.proyectos }}</p>
+                </div>
+              </div>
+
+              <!-- COLUMNA DERECHA -->
+              <div class="cvp-column right-column">
+                <!-- Educación -->
+                <div class="cvp-section" v-if="perfil.educacion">
+                  <h3 class="cvp-section-title" :style="{ color: diseno.color }">
+                    <i class="bi bi-mortarboard-fill"></i> Educación:
+                  </h3>
+                  <p class="cvp-section-text pre">{{ perfil.educacion }}</p>
+                </div>
+
+                <!-- Idiomas -->
+                <div class="cvp-section" v-if="objetivos.idiomas">
+                  <h3 class="cvp-section-title" :style="{ color: diseno.color }">
+                    <i class="bi bi-flag-fill"></i> Idiomas:
+                  </h3>
+                  <p class="cvp-section-text pre">{{ objetivos.idiomas }}</p>
+                </div>
+
+                <!-- Valores profesionales -->
+                <div class="cvp-section" v-if="objetivos.valores">
+                  <h3 class="cvp-section-title" :style="{ color: diseno.color }">
+                    <i class="bi bi-patch-check-fill"></i> Valores profesionales:
+                  </h3>
+                  <p class="cvp-section-text pre">{{ objetivos.valores }}</p>
+                </div>
+
+                <!-- Habilidades -->
+                <div class="cvp-section" v-if="logros.habilidades">
+                  <h3 class="cvp-section-title" :style="{ color: diseno.color }">
+                    <i class="bi bi-tools"></i> Habilidades:
+                  </h3>
+                  <p class="cvp-section-text pre">{{ logros.habilidades }}</p>
+                </div>
+
+                <!-- Logros -->
+                <div class="cvp-section" v-if="logros.logros">
+                  <h3 class="cvp-section-title" :style="{ color: diseno.color }">
+                    <i class="bi bi-trophy-fill"></i> Logros:
+                  </h3>
+                  <p class="cvp-section-text pre">{{ logros.logros }}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Contenido derecho -->
-          <div class="cvp-right">
-            <div class="cvp-section-title-right" :style="{ color: diseno.color }">SOBRE MÍ</div>
-            <p class="cvp-text">{{ perfil.sobreMi }}</p>
-
-            <div class="cvp-section-title-right" :style="{ color: diseno.color }">EDUCACIÓN</div>
-            <p class="cvp-text">{{ perfil.educacion }}</p>
-
-            <div class="cvp-section-title-right" :style="{ color: diseno.color }">OBJETIVO</div>
-            <p class="cvp-text">{{ objetivos.objetivo }}</p>
-
-            <div class="cvp-section-title-right" :style="{ color: diseno.color }">VALORES PROFESIONALES</div>
-            <p class="cvp-text pre">{{ objetivos.valores }}</p>
-
-            <div class="cvp-section-title-right" :style="{ color: diseno.color }">CONOCIMIENTOS</div>
-            <p class="cvp-text">{{ objetivos.conocimientos }}</p>
-
-            <div class="cvp-section-title-right" :style="{ color: diseno.color }">CERTIFICADOS</div>
-            <p class="cvp-text pre">{{ logros.certificados }}</p>
-
-            <div class="cvp-section-title-right" :style="{ color: diseno.color }">LOGROS</div>
-            <p class="cvp-text">{{ logros.logros }}</p>
-
-            <div class="cvp-section-title-right" :style="{ color: diseno.color }">PROYECTOS DE BENEFICIO SOCIAL</div>
-            <p class="cvp-text">{{ logros.proyectos }}</p>
+          <div class="preview-actions-panel">
+            <button class="btn-preview-action btn-outline" @click="paso = 1" style="font-style: italic;">
+              Editar <i class="bi bi-pencil ms-1"></i>
+            </button>
+            <button class="btn-preview-action btn-outline" @click="soloDescargar">
+              Imprimir cv
+            </button>
+            <button class="btn-preview-action btn-solid" @click="soloGuardar" :disabled="guardando">
+              <span v-if="guardando" class="spinner-border spinner-border-sm me-1"></span>
+              Guardar
+            </button>
+            <button class="btn-preview-action btn-outline" @click="soloDescargar" :disabled="descargando">
+              <span v-if="descargando" class="spinner-border spinner-border-sm me-1"></span>
+              Descargar CV
+            </button>
           </div>
         </div>
         <p v-if="generando" class="gen-msg"><span class="spinner-border spinner-border-sm me-2"></span> Generando y guardando CV...</p>
       </div>
 
       <!-- ===== BOTONES INFERIORES ===== -->
-      <div class="wiz-footer">
+      <div class="wiz-footer" v-if="paso < 5">
         <!-- Botón izquierdo: Cancelar (paso 0) o Atrás -->
         <div class="footer-left">
           <button class="btn-wiz btn-atras" @click="paso === 0 ? confirmarSalida() : handleAtras()">
@@ -255,23 +347,8 @@
 
         <!-- Botón derecho: acciones -->
         <div class="footer-right">
-          <!-- Guardar progreso en pasos 2-4 -->
-
-
-          <!-- Paso 5: botones separados de Guardar y Descargar -->
-          <template v-if="paso === 5">
-            <button class="btn-wiz btn-guardar-cv" @click="soloGuardar" :disabled="guardando">
-              <span v-if="guardando" class="spinner-border spinner-border-sm me-1"></span>
-              <i v-else class="bi bi-cloud-check me-1"></i> Guardar
-            </button>
-            <button class="btn-wiz btn-descargar-cv" @click="soloDescargar" :disabled="descargando">
-              <span v-if="descargando" class="spinner-border spinner-border-sm me-1"></span>
-              <i v-else class="bi bi-download me-1"></i> Descargar PDF
-            </button>
-          </template>
-
           <!-- Pasos 0-4: botón Siguiente / Vista Previa -->
-          <button v-else class="btn-wiz btn-siguiente" @click="handleSiguiente" :disabled="generando || (paso === 0 && !tituloCv.trim())">
+          <button class="btn-wiz btn-siguiente" @click="handleSiguiente" :disabled="generando || (paso === 0 && !tituloCv.trim())">
             <span v-if="generando" class="spinner-border spinner-border-sm me-2"></span>
             <span v-if="paso === 4"><i class="bi bi-eye me-1"></i> Vista Previa</span>
             <span v-else-if="paso === 0">Iniciar &nbsp;<i class="bi bi-arrow-right"></i></span>
@@ -316,7 +393,7 @@ const colores = [
 const fuentes = ['Montserrat', 'Inter', 'Lora', 'Roboto', 'Georgia'];
 
 const diseno    = ref({ color: '#67000F', fuente: 'Montserrat' });
-const perfil    = ref({ nombre: '', direccion: '', email: '', telefono: '', sobreMi: '', educacion: '', fotoUrl: '' });
+const perfil    = ref({ nombre: '', profesion: '', direccion: '', email: '', telefono: '', sobreMi: '', educacion: '', fotoUrl: '' });
 const objetivos = ref({ objetivo: '', valores: '', conocimientos: '', idiomas: '' });
 const logros    = ref({ certificados: '', habilidades: '', logros: '', proyectos: '' });
 
@@ -328,6 +405,7 @@ onMounted(() => {
     diseno.value.fuente = cv.fuente || 'Montserrat';
     
     perfil.value.nombre = cv.nombre_completo || '';
+    perfil.value.profesion = cv.profesion || '';
     perfil.value.direccion = cv.direccion || '';
     perfil.value.email = cv.email || '';
     perfil.value.telefono = cv.telefono || '';
@@ -643,38 +721,246 @@ const soloGuardar = async () => {
 .wiz-input:focus, .wiz-textarea:focus { outline: none; border-color: #010C67; }
 
 /* Preview */
-.preview-titulo-badge {
-  display: inline-flex; align-items: center;
-  background: #010C67; color: #fff;
-  border-radius: 20px; padding: 6px 18px;
-  font-size: 14px; font-weight: 600;
-  margin-bottom: 16px;
+.preview-main-title {
+  text-align: center;
+  font-family: 'Lora', serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: #111111;
+  margin-bottom: 24px;
 }
-.preview-body { padding: 20px; background: #f0f0f0; overflow-y: auto; }
+
+.preview-body {
+  padding: 24px 40px;
+  background: #f0f0f0;
+  overflow-y: auto;
+}
+
+.preview-container {
+  display: flex;
+  gap: 28px;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.cv-wizard-wrapper.preview-mode {
+  max-width: 1060px;
+}
+
+.wiz-header-inner.preview-mode {
+  justify-content: center;
+  position: relative;
+}
+
+.wiz-header-inner.preview-mode .btn-cerrar-wizard {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* CV Full Sheet */
 .cv-full-preview {
-  display: flex; background: #fff;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-  min-height: 800px; border-radius: 4px; overflow: hidden;
+  width: 794px;
+  min-height: 1050px;
+  background: #ffffff;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+  border: 1px solid #dcdcdc;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
-.cvp-left {
-  width: 220px; flex-shrink: 0;
-  padding: 28px 18px; color: #fff;
-  display: flex; flex-direction: column; align-items: center;
+
+/* Header Band */
+.cvp-header {
+  padding: 32px 40px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 28px;
 }
-.cvp-foto-wrap { margin-bottom: 12px; }
-.cvp-foto { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.5); }
-.cvp-foto-placeholder { width: 90px; height: 90px; border-radius: 50%; background: rgba(255,255,255,0.25); font-size: 48px; display: flex; align-items: center; justify-content: center; }
-.cvp-name { font-size: 15px; font-weight: 700; text-align: center; margin-bottom: 16px; }
-.cvp-section-title { width: 100%; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-align: center; border-top: 1px solid rgba(255,255,255,0.4); padding-top: 8px; margin-bottom: 8px; }
-.cvp-section-title.mt { margin-top: 12px; }
-.cvp-item { font-size: 11px; margin-bottom: 5px; word-break: break-all; text-align: center; }
-.cvp-pre { font-size: 10px; white-space: pre-wrap; text-align: left; width: 100%; }
-.cvp-right { flex: 1; padding: 28px 24px; }
-.cvp-section-title-right { font-size: 12px; font-weight: 700; letter-spacing: 1px; border-bottom: 2px solid currentColor; padding-bottom: 4px; margin-bottom: 8px; margin-top: 16px; }
-.cvp-section-title-right:first-child { margin-top: 0; }
-.cvp-text { font-size: 12px; color: #333; margin: 0 0 4px; line-height: 1.5; }
-.cvp-text.pre { white-space: pre-wrap; }
-.gen-msg { text-align: center; color: #555; margin-top: 16px; font-size: 14px; }
+
+.cvp-header-foto-wrap {
+  flex-shrink: 0;
+}
+
+.cvp-header-foto {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+}
+
+.cvp-header-foto-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: #ffffff;
+}
+
+.cvp-header-text {
+  flex-grow: 1;
+}
+
+.cvp-header-text h1.cvp-name {
+  margin: 0 0 6px 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-family: inherit;
+}
+
+.cvp-header-text p.cvp-subtitle {
+  margin: 0;
+  font-size: 15px;
+  opacity: 0.95;
+  font-weight: 500;
+}
+
+/* Body columns */
+.cvp-content {
+  display: flex;
+  padding: 32px 40px 48px;
+  gap: 40px;
+  background: #ffffff;
+  flex: 1;
+}
+
+.cvp-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Contact info group */
+.cvp-contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cvp-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: #333333;
+}
+
+.cvp-contact-item i {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.cvp-contact-label {
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.cvp-contact-val {
+  color: #333333;
+}
+
+/* Sections */
+.cvp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cvp-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+.cvp-section-title i {
+  font-size: 16px;
+}
+
+.cvp-section-text {
+  font-size: 12px;
+  color: #444444;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.cvp-section-text.pre {
+  white-space: pre-wrap;
+}
+
+.gen-msg {
+  text-align: center;
+  color: #555;
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+/* Action panel on the right */
+.preview-actions-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 140px;
+  flex-shrink: 0;
+  padding-top: 10px;
+}
+
+.btn-preview-action {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  outline: none;
+  text-decoration: none;
+  border: none;
+  box-shadow: none;
+}
+
+.btn-preview-action.btn-outline {
+  background: #ffffff;
+  color: #222222;
+  border: 1px solid #777777;
+}
+
+.btn-preview-action.btn-outline:hover {
+  background: #f4f4f4;
+  border-color: #222222;
+}
+
+.btn-preview-action.btn-solid {
+  background: #010C67;
+  color: #ffffff;
+  border: 1px solid #010C67;
+}
+
+.btn-preview-action.btn-solid:hover {
+  background: #000c50;
+}
+
+.btn-preview-action:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
 
 /* Footer */
 .wiz-footer {
@@ -690,7 +976,6 @@ const soloGuardar = async () => {
   border-radius: 10px; padding: 10px 24px;
   cursor: pointer; transition: background-color 0.2s, opacity 0.2s;
   display: inline-flex; align-items: center; gap: 6px;
-  /* Reset: eliminar sombras y efectos de foco de Bootstrap */
   -webkit-appearance: none;
   appearance: none;
   outline: none !important;
@@ -702,26 +987,73 @@ const soloGuardar = async () => {
   box-shadow: none !important;
 }
 .btn-atras {
-  background: #f0f0f0; color: #444; border: 1.5px solid #ddd;
+  background: #ffffff; color: #67000F; border: 1.5px solid #67000F;
   font-size: 14px; padding: 9px 18px;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
 }
-.btn-atras:hover { background: #e0e0e0; }
-
-.btn-guardar-cv {
-  background: #010C67; color: #fff; border: none;
-  font-size: 14px; padding: 9px 22px;
-}
-.btn-guardar-cv:hover:not(:disabled) { background: #00589B; }
-.btn-guardar-cv:disabled { opacity: 0.65; cursor: not-allowed; }
-
-.btn-descargar-cv {
-  background: #1a5c3a; color: #fff; border: none;
-  font-size: 14px; padding: 9px 22px;
-}
-.btn-descargar-cv:hover:not(:disabled) { background: #155030; }
-.btn-descargar-cv:disabled { opacity: 0.65; cursor: not-allowed; }
+.btn-atras:hover { background: #67000F; color: #ffffff; }
 
 .btn-siguiente { background: #010C67; color: #fff; border: none; }
 .btn-siguiente:hover:not(:disabled) { background: #00589B; }
 .btn-siguiente:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* Responsive CV Wizard */
+@media (max-width: 768px) {
+  .cv-wizard-wrapper {
+    width: 96%;
+    max-height: 98vh;
+  }
+  .wiz-stepper {
+    padding: 16px 20px 8px;
+  }
+  .step-line {
+    min-width: 30px;
+  }
+  .wiz-body {
+    padding: 16px 20px;
+  }
+  .paso1-body {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .paso1-left {
+    flex: none;
+    width: 100%;
+  }
+  .paso2-body {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .paso2-left {
+    flex: none;
+    width: 100%;
+  }
+  .paso3-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  .preview-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .preview-actions-panel {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn-preview-action {
+    width: auto;
+    flex: 1 1 120px;
+  }
+  .preview-body {
+    overflow-x: auto;
+  }
+  .wiz-footer {
+    padding: 12px 20px;
+  }
+}
 </style>

@@ -1,11 +1,16 @@
 <template>
-  <div class="dashboard-layout">
+  <div class="dashboard-layout" :class="{ 'dark-mode': darkActive }">
     
+    <!-- OVERLAY FOR MOBILE SIDEBAR -->
+    <div class="sidebar-overlay" v-if="sidebarOpen" @click="sidebarOpen = false"></div>
+
     <!-- SIDEBAR -->
-    <aside class="dashboard-sidebar">
+    <aside class="dashboard-sidebar" :class="{ 'open': sidebarOpen }">
       <div class="sidebar-header">
-        <!-- Tu nuevo logo en imagen -->
-        <img src="/images/logo_ugb.png" alt="Logo UGB" class="ugb-logo-img">
+        <!-- Tu nuevo logo en imagen y toggle de modo oscuro -->
+        <div class="d-flex flex-column align-items-center w-100 gap-3">
+          <img src="/images/logo_ugb.png" alt="Logo UGB" class="ugb-logo-img">
+        </div>
       </div>
 
       <nav class="sidebar-nav">
@@ -14,7 +19,7 @@
             v-for="item in navItems"
             :key="item.seccion"
             :class="{ active: seccionActiva === item.seccion || (item.alias && item.alias.includes(seccionActiva)), 'nav-logout': item.logout }"
-            @click="item.logout ? cerrarSesion() : (seccionActiva = item.seccion)"
+            @click="item.logout ? cerrarSesion() : cambiarSeccion(item.seccion)"
           >
             <a href="#">
               <i :class="item.icon + ' me-3'"></i>
@@ -27,30 +32,31 @@
 
     <!-- MAIN AREA -->
     <div class="main-area">
-      <!-- MAIN HEADER -->
-      <header class="main-header">
-        <div class="page-title">
-          <h2>{{ formatTitle(seccionActiva) }}</h2>
-        </div>
-        <div class="user-profile-section">
-          <div class="avatar-dropdown">
-            <div class="avatar-circle">
-              <i class="bi bi-person-fill"></i>
-            </div>
-            <div class="dropdown-menu-custom">
-              <p class="user-name">{{ usuario.nombres }} {{ usuario.apellidos }}</p>
-              <p class="user-role">{{ usuario.rol }}</p>
-              <button class="btn-logout" @click="cerrarSesion">Cerrar Sesión</button>
-            </div>
-          </div>
-        </div>
+      <!-- MOBILE TOP BAR -->
+      <header class="mobile-top-bar">
+        <button class="menu-toggle-btn" @click="toggleSidebar">
+          <i class="bi bi-list"></i>
+        </button>
+        <img src="/images/logo_ugb.png" alt="Logo UGB" class="mobile-logo">
+        <div style="width: 40px;"></div> <!-- spacer to center the logo roughly -->
       </header>
 
       <!-- MAIN CONTENT -->
       <main class="dashboard-content">
+        <AiChatWindow
+          v-if="seccionActiva === 'chat_ia'"
+          :usuario="usuario"
+        />
+        <ConfiguracionApp
+          v-else-if="seccionActiva === 'configuracion'"
+          :isDark="darkActive"
+          @toggleDarkMode="toggleDarkMode"
+        />
         <component 
+          v-else
           :is="dashboardComponent" 
           :seccionActiva="seccionActiva" 
+          :isDark="darkActive"
           @cambiarSeccion="cambiarSeccion"
         ></component>
       </main>
@@ -61,13 +67,28 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
+import AiChatWindow from './AiChatWindow.vue';
+import ConfiguracionApp from './ConfiguracionApp.vue';
 
 const seccionActiva = ref('dashboard');
+const sidebarOpen = ref(false);
+const darkActive = ref(localStorage.getItem('theme') === 'dark');
+
+const toggleDarkMode = () => {
+  darkActive.value = !darkActive.value;
+  localStorage.setItem('theme', darkActive.value ? 'dark' : 'light');
+};
+
 import PasanteDashboard from './PasanteDashboard.vue';
 import SupervisorDashboard from './SupervisorDashboard.vue';
 import ViceDecanoDashboard from './ViceDecanoDashboard.vue';
 
 const usuario = ref({});
+
+const toggleSidebar = () => {
+  sidebarOpen.value = !sidebarOpen.value;
+};
 
 onMounted(() => {
   const userJson = localStorage.getItem('usuario');
@@ -96,7 +117,10 @@ const navItems = computed(() => {
       { seccion: 'validar_cv',        label: 'Validar CVs',         icon: 'bi bi-check2-square' },
       { seccion: 'mis_pasantes',      label: 'Mis Pasantes',        icon: 'bi bi-people-fill' },
       { seccion: 'evaluar_informes',  label: 'Evaluar Informes',    icon: 'bi bi-file-earmark-check-fill' },
+      { seccion: 'ver_vacantes',      label: 'Sugerir Vacantes',    icon: 'bi bi-building-fill-add' },
       { seccion: 'recomendaciones',   label: 'Recomendaciones',     icon: 'bi bi-award-fill' },
+      { seccion: 'chat_ia',           label: 'Análisis IA',         icon: 'bi bi-search-heart' },
+      { seccion: 'configuracion',     label: 'Configuración',       icon: 'bi bi-gear-fill' },
       { seccion: 'logout',            label: 'Cerrar sesión',       icon: 'bi bi-box-arrow-left', logout: true },
     ];
   }
@@ -108,8 +132,9 @@ const navItems = computed(() => {
       { seccion: 'asignar_supervisores', label: 'Asignar Supervisores',  icon: 'bi bi-person-lines-fill' },
       { seccion: 'evaluar_informe',      label: 'Evaluar Informes',      icon: 'bi bi-file-earmark-check-fill' },
       { seccion: 'vista_supervisores',   label: 'Modo Supervisor',       icon: 'bi bi-person-badge-fill' },
-      { seccion: 'analisis_ia',          label: 'Análisis IA',           icon: 'bi bi-search-heart' },
       { seccion: 'estadisticas',         label: 'Estadísticas',          icon: 'bi bi-bar-chart-fill' },
+      { seccion: 'chat_ia',              label: 'Análisis IA',           icon: 'bi bi-search-heart' },
+      { seccion: 'configuracion',        label: 'Configuración',         icon: 'bi bi-gear-fill' },
       { seccion: 'logout',               label: 'Cerrar sesión',         icon: 'bi bi-box-arrow-left', logout: true },
     ];
   }
@@ -121,7 +146,7 @@ const navItems = computed(() => {
     { seccion: 'informes',     label: 'Informes',             icon: 'bi bi-file-earmark-text-fill' },
     { seccion: 'vacantes',     label: 'Vacantes',             icon: 'bi bi-building-fill-add' },
     { seccion: 'progreso',     label: 'Historial de progreso',icon: 'bi bi-clock-fill' },
-    { seccion: 'analisis_ia',  label: 'Análisis IA',          icon: 'bi bi-search-heart' },
+    { seccion: 'chat_ia',      label: 'Análisis IA',          icon: 'bi bi-search-heart' },
     { seccion: 'configuracion',label: 'Configuración',        icon: 'bi bi-gear-fill' },
     { seccion: 'logout',       label: 'Cerrar sesión',        icon: 'bi bi-box-arrow-left', logout: true },
   ];
@@ -135,25 +160,27 @@ const formatTitle = (seccion) => {
     informes:             'Informes',
     vacantes:             'Vacantes Disponibles',
     progreso:             'Historial de Progreso',
-    analisis_ia:          'Análisis IA',
     configuracion:        'Configuración',
     validar_cv:           'Validar CVs de Pasantes',
     asignar:              'Asignar Vacantes',
     mis_pasantes:         'Gestión de Pasantes',
     solicitudes:          'Solicitudes de Pasantes',
     evaluar_informes:     'Evaluar Informes y Validar Horas',
+    ver_vacantes:         'Sugerir Vacantes a Pasantes',
     recomendaciones:      'Recomendaciones para Pasantes',
     evaluar_informe:      'Evaluar Informes Finales',
     estadisticas:         'Estadísticas Generales',
     crear_vacantes:       'Crear Nuevas Vacantes',
     asignar_supervisores: 'Asignación de Supervisores',
     vista_supervisores:   'Modo Supervisor Global',
+    chat_ia:              'Análisis IA',
   };
   return labels[seccion] ?? 'Dashboard';
 };
 
 const cambiarSeccion = (nuevaSeccion) => {
   seccionActiva.value = nuevaSeccion;
+  sidebarOpen.value = false;
 };
 
 const cerrarSesion = () => {
@@ -169,8 +196,20 @@ const cerrarSesion = () => {
   height: 100vh;
   width: 100vw;
   font-family: 'Inter', sans-serif;
-  background-color: #f8fafc;
+  background-color: #F4F4F4;
   overflow: hidden;
+  position: relative;
+}
+
+/* Sidebar Overlay */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 998;
 }
 
 /* Sidebar */
@@ -182,7 +221,8 @@ const cerrarSesion = () => {
   border-right: 1px solid #e2e8f0;
   box-shadow: 4px 0 20px rgba(0,0,0,0.04);
   flex-shrink: 0;
-  z-index: 10;
+  z-index: 1000;
+  height: 100%;
 }
 
 .sidebar-header {
@@ -202,6 +242,7 @@ const cerrarSesion = () => {
 
 .sidebar-nav {
   flex: 1;
+  overflow-y: auto;
 }
 
 .sidebar-nav ul {
@@ -261,97 +302,41 @@ const cerrarSesion = () => {
   height: 100vh;
 }
 
-/* Main Header */
-.main-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* Mobile Top Bar */
+.mobile-top-bar {
+  display: none;
+  height: 64px;
   background-color: #ffffff;
-  padding: 15px 40px;
-  height: 75px;
   border-bottom: 1px solid #e2e8f0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
   flex-shrink: 0;
+  z-index: 90;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
 }
 
-.page-title h2 {
-  font-family: 'Lora', serif;
-  font-size: 24px;
-  font-weight: 600;
-  color: #0f172a;
-  margin: 0;
-}
-
-.avatar-dropdown {
-  position: relative;
+.menu-toggle-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #000B58;
   cursor: pointer;
-}
-
-.avatar-circle {
-  width: 45px;
-  height: 45px;
-  background-color: #e2e8f0;
-  border-radius: 50%;
+  padding: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
-  color: #475569;
-  transition: background-color 0.2s;
-  border: 2px solid #001374;
-}
-
-.avatar-circle:hover {
-  background-color: #cbd5e1;
-}
-
-.dropdown-menu-custom {
-  display: none;
-  position: absolute;
-  top: 55px;
-  right: 0;
-  background-color: white;
-  color: #1e293b;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  padding: 15px;
-  width: 220px;
-  z-index: 100;
-}
-
-.avatar-dropdown:hover .dropdown-menu-custom {
-  display: block;
-}
-
-.user-name {
-  font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 2px;
-  color: #0f172a;
-}
-
-.user-role {
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 12px;
-  text-transform: capitalize;
-}
-
-.btn-logout {
-  background-color: #ef4444;
-  color: white;
-  border: none;
-  width: 100%;
-  padding: 8px;
-  border-radius: 6px;
-  font-weight: 500;
-  font-size: 14px;
-  cursor: pointer;
+  border-radius: 8px;
   transition: background-color 0.2s;
 }
 
-.btn-logout:hover {
-  background-color: #dc2626;
+.menu-toggle-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.mobile-logo {
+  height: 44px;
+  object-fit: contain;
 }
 
 /* Main Content */
@@ -359,6 +344,31 @@ const cerrarSesion = () => {
   flex: 1;
   padding: 35px 40px;
   overflow-y: auto;
-  background-color: #f8fafc;
+  background-color: #F4F4F4;
+}
+
+/* Responsive Styles */
+@media (max-width: 991px) {
+  .mobile-top-bar {
+    display: flex;
+  }
+
+  .dashboard-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 10px 0 30px rgba(0,0,0,0.1);
+  }
+
+  .dashboard-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .dashboard-content {
+    padding: 20px 16px;
+  }
 }
 </style>

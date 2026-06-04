@@ -23,9 +23,6 @@
     <ViceDecanoCrearVacantes v-else-if="seccionActiva === 'crear_vacantes'" />
     <ViceDecanoAsignarSupervisores v-else-if="seccionActiva === 'asignar_supervisores'" />
 
-    <!-- Análisis IA Global para Vice Decano -->
-    <PasanteAnalisisIa v-else-if="seccionActiva === 'analisis_ia'" :usuario="usuarioDummy" />
-
     <!-- Modo Supervisor Global (Incrustado con Navegación por Pestañas) -->
     <div v-else-if="seccionActiva === 'vista_supervisores'" class="modo-supervisor-wrapper animate-fade-in">
       <div class="supervisor-nav-tabs mb-4">
@@ -97,7 +94,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
 
 // Importación de subcomponentes
@@ -106,15 +103,18 @@ import ViceDecanoEvaluarInforme from './ViceDecanoEvaluarInforme.vue';
 import ViceDecanoCrearVacantes from './ViceDecanoCrearVacantes.vue';
 import ViceDecanoAsignarSupervisores from './ViceDecanoAsignarSupervisores.vue';
 
-// Análisis IA
-import PasanteAnalisisIa from './PasanteAnalisisIa.vue';
-
 // Dashboard completo del supervisor
 import SupervisorDashboard from './SupervisorDashboard.vue';
 
-const props = defineProps({ seccionActiva: String });
+const props = defineProps({
+  seccionActiva: String,
+  isDark: { type: Boolean, default: false }
+});
 
-const isDark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches);
+const isDark = ref(props.isDark);
+watch(() => props.isDark, (newVal) => {
+  isDark.value = newVal;
+});
 const cargando = ref(false);
 const cargandoStats = ref(false);
 const informesPendientes = ref(0);

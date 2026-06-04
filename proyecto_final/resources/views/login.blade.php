@@ -43,7 +43,8 @@
             height: 100%;
             margin: 0;
             font-family: var(--font-texto);
-            background-color: #F8F9FA;
+            background: linear-gradient(rgba(0, 11, 88, 0.65), rgba(0, 11, 88, 0.65)), url('{{ asset('images/Fondo_login.png') }}') no-repeat center center fixed;
+            background-size: cover;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -128,7 +129,7 @@
             font-size: 20px;
             font-weight: 500;
             border: none;
-            border-radius: 15px;
+            border-radius: 18px;
             padding: 12px 0;
             width: 80%;
             margin-top: 20px;
@@ -275,7 +276,7 @@
             background-color: var(--color-secundario-2);
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 18px;
             padding: 10px 25px;
             font-family: var(--font-titulo);
             font-size: 18px;
@@ -288,7 +289,7 @@
             background-color: var(--color-primario);
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 18px;
             padding: 10px 25px;
             font-family: var(--font-titulo);
             font-size: 18px;
@@ -301,6 +302,70 @@
             filter: brightness(1.2);
             transform: translateY(-2px);
         }
+
+        /* AlertifyJS Custom Theme Buttons */
+        .btn-alertify-ok {
+            background-color: var(--color-primario) !important;
+            color: #ffffff !important;
+            border: none !important;
+            border-radius: 18px !important;
+            padding: 10px 24px !important;
+            font-family: var(--font-titulo) !important;
+            font-size: 16px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease-in-out !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+        }
+
+        .btn-alertify-ok:hover {
+            background-color: #01084a !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 10px rgba(0,0,0,0.3) !important;
+        }
+
+        .btn-alertify-cancel {
+            background-color: var(--color-secundario-2) !important;
+            color: #ffffff !important;
+            border: none !important;
+            border-radius: 18px !important;
+            padding: 10px 24px !important;
+            font-family: var(--font-titulo) !important;
+            font-size: 16px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease-in-out !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+        }
+
+        .btn-alertify-cancel:hover {
+            background-color: #8b0015 !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 10px rgba(0,0,0,0.3) !important;
+        }
+
+        /* Back Arrow Buttons */
+        .back-arrow-btn {
+            position: absolute;
+            top: 20px;
+            left: 24px;
+            color: var(--color-primario) !important;
+            font-size: 24px;
+            text-decoration: none;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .back-arrow-btn:hover {
+            transform: translateX(-3px);
+            opacity: 0.8;
+            color: var(--color-secundario-1) !important;
+        }
     </style>
 </head>
 <body>
@@ -309,13 +374,22 @@
         
         <!-- INICIAR SESIÓN -->
         <div class="auth-card" v-if="vistaActual === 'login'">
-            <img src="{{ asset('images/logo_ugb.png') }}" alt="Logo UGB" class="img-fluid mb-3" style="max-height: 80px; object-fit: contain; display: block; margin: 0 auto;">
+            <!-- Botón de regresar (flecha izquierda) -->
+            <a href="/" class="back-arrow-btn">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+
+            <!-- Logo UGB -->
+            <img src="{{ asset('images/logo_ugb.png') }}" alt="Logo UGB" class="mb-3 mx-auto" style="height: 72px; object-fit: contain; display: block;">
+
+
             <h2 class="titulo-genesis">Iniciar sesión</h2>
-            <p class="subtitulo-genesis">Ingresa tu correo institucional para iniciar</p>
+            <p class="subtitulo-genesis" style="margin-bottom: 4px; font-weight: 500;">¡Bienvenido!</p>
+            <p class="subtitulo-genesis" style="margin-bottom: 24px; font-size: 14px;">Ingresa tu correo y contraseña para iniciar</p>
             
             <form @submit.prevent="iniciarSesion">
                 
-                <label class="label-genesis">Correo institucional:</label>
+                <label class="label-genesis">Correo:</label>
                 <div class="input-group-custom">
                     <input type="email" class="input-genesis" v-model="loginForm.correo" placeholder="usss@000ugb.edu.sv" required :disabled="cargando">
                 </div>
@@ -323,24 +397,35 @@
                 <label class="label-genesis">Contraseña:</label>
                 <div class="input-group-custom">
                     <input :type="mostrarPassword ? 'text' : 'password'" class="input-genesis" v-model="loginForm.contrasena" placeholder="********" required :disabled="cargando">
-                    <i class="bi icon-eye" :class="mostrarPassword ? 'bi-eye-slash' : 'bi-eye'" @click="mostrarPassword = !mostrarPassword"></i>
+                    <i class="bi icon-eye" :class="mostrarPassword ? 'bi-eye-slash' : 'bi-eye'" @click="mostrarPassword = !mostrarPassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #777;"></i>
                 </div>
 
-                <button type="submit" class="btn-genesis" :disabled="cargando">
+                <div class="text-center mb-3">
+                    <a href="#" class="text-link small" @click.prevent="cambiarVista('recuperar')">¿Olvidaste tu contraseña?</a>
+                </div>
+
+                <button type="submit" class="btn-genesis" :disabled="cargando" style="background-color: #000B58; font-size: 16px; width: 171px; height: 41px; padding: 0; border-radius: 18px; margin-top: 10px;">
                     <span v-if="cargando" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     Iniciar sesión
                 </button>
 
-                <div class="mt-4">
-                    <a href="#" class="text-link d-block mb-2" @click.prevent="cambiarVista('recuperar')">¿Olvidaste tu contraseña?</a>
-                    <a href="#" class="text-link d-block" @click.prevent="cambiarVista('registro')">¿No tienes cuenta? Regístrate</a>
+                <div class="mt-4" style="font-size: 14px; color: #555;">
+                    ¿No tienes cuenta? <a href="#" class="text-link" @click.prevent="cambiarVista('registro')">Crear una cuenta</a>
                 </div>
             </form>
         </div>
 
         <!-- REGISTRO -->
         <div class="auth-card" v-if="vistaActual === 'registro'">
-            <img src="{{ asset('images/logo_ugb.png') }}" alt="Logo UGB" class="img-fluid mb-3" style="max-height: 80px; object-fit: contain; display: block; margin: 0 auto;">
+            <!-- Botón de regresar (flecha izquierda) -->
+            <a href="/" class="back-arrow-btn">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+
+            <!-- Logo UGB -->
+            <img src="{{ asset('images/logo_ugb.png') }}" alt="Logo UGB" class="mb-3 mx-auto" style="height: 72px; object-fit: contain; display: block;">
+
+
             <h2 class="titulo-genesis">Crea una cuenta</h2>
             <p class="subtitulo-genesis">Ingresa tus datos para crear una cuenta</p>
             
@@ -379,13 +464,13 @@
                     <label for="terms">He leído y acepto los <a href="#" class="text-link" @click.prevent="mostrarTerminos = true">Términos y Condiciones de Uso</a></label>
                 </div>
 
-                <button type="submit" class="btn-genesis" :disabled="cargando || !registroForm.terminos">
+                <button type="submit" class="btn-genesis" :disabled="cargando || !registroForm.terminos" style="background-color: #000B58; font-size: 16px; width: 171px; height: 41px; padding: 0; border-radius: 18px; margin-top: 20px;">
                     <span v-if="cargando" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     Guardar
                 </button>
 
-                <div class="mt-4">
-                    <a href="#" class="text-link" @click.prevent="cambiarVista('login')">Ya tengo una cuenta. Iniciar sesión</a>
+                <div class="mt-4" style="font-size: 14px; color: #555;">
+                    ¿Ya tienes cuenta? <a href="#" class="text-link" @click.prevent="cambiarVista('login')">Iniciar sesión</a>
                 </div>
             </form>
         </div>
@@ -405,8 +490,12 @@
 
         <!-- RECUPERAR CONTRASEÑA -->
         <div class="auth-card" v-if="vistaActual === 'recuperar'">
-            <button class="close-btn" @click="cambiarVista('login')">&times;</button>
-            <img src="{{ asset('images/logo_ugb.png') }}" alt="Logo UGB" class="img-fluid mb-3" style="max-height: 80px; object-fit: contain; display: block; margin: 0 auto;">
+            <!-- Botón de regresar a login (flecha izquierda) -->
+            <a href="#" class="back-arrow-btn" @click.prevent="cambiarVista('login')">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+
+
             <h2 class="titulo-genesis">Restablecer contraseña</h2>
             
             <!-- PASO 1: Ingresar Correo -->
@@ -478,8 +567,8 @@
     <script>
         // Configuración de AlertifyJS
         alertify.set('notifier','position', 'top-right');
-        alertify.defaults.theme.ok = "btn btn-primary";
-        alertify.defaults.theme.cancel = "btn btn-danger";
+        alertify.defaults.theme.ok = "btn btn-alertify-ok";
+        alertify.defaults.theme.cancel = "btn btn-alertify-cancel";
 
         // Configurar instancia global de Axios apuntando a la API de Laravel
         const api = axios.create({
