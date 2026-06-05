@@ -205,14 +205,19 @@ class SupervisorController extends Controller
             ->map(function ($inf) {
                 return (object)[
                     'id' => $inf->id,
+                    'pasante_id' => $inf->pasante_id,
                     'pasante' => ($inf->pasante->usuario->nombres ?? '') . ' ' . ($inf->pasante->usuario->apellidos ?? ''),
                     'nombre' => $inf->nombre ?: ('Informe ' . ucfirst($inf->tipo)),
                     'fecha' => $inf->created_at ? $inf->created_at->format('d M Y') : date('d M Y'),
+                    'fecha_inicio' => $inf->fecha_inicio ? \Carbon\Carbon::parse($inf->fecha_inicio)->format('d M Y') : null,
+                    'fecha_fin' => $inf->fecha_fin ? \Carbon\Carbon::parse($inf->fecha_fin)->format('d M Y') : null,
                     'horas' => $inf->horas ?? 0,
                     'objetivos' => $inf->objetivos ?: 'No se registraron objetivos en el formulario.',
                     'actividades' => $inf->actividades ?: 'No se registraron actividades en el formulario.',
                     'conclusiones' => $inf->conclusiones ?: 'No se registraron conclusiones en el formulario.',
-                    'archivo_url' => $inf->archivo_url
+                    'archivo_url' => $inf->archivo_url,
+                    'bitacora' => $inf->bitacora,
+                    'imagenes' => $inf->imagenes
                 ];
             });
 
@@ -287,9 +292,12 @@ class SupervisorController extends Controller
             ->map(function ($inf) {
                 return (object)[
                     'id' => $inf->id,
+                    'pasante_id' => $inf->pasante_id,
                     'pasante' => ($inf->pasante->usuario->nombres ?? '') . ' ' . ($inf->pasante->usuario->apellidos ?? ''),
                     'nombre' => $inf->nombre ?: ('Informe ' . ucfirst($inf->tipo)),
                     'fecha' => $inf->created_at ? $inf->created_at->format('d M Y') : date('d M Y'),
+                    'fecha_inicio' => $inf->fecha_inicio ? \Carbon\Carbon::parse($inf->fecha_inicio)->format('d M Y') : null,
+                    'fecha_fin' => $inf->fecha_fin ? \Carbon\Carbon::parse($inf->fecha_fin)->format('d M Y') : null,
                     'fecha_revision' => $inf->created_at ? $inf->created_at->format('d M Y H:i') : null,
                     'horas' => $inf->horas ?? 0,
                     'objetivos' => $inf->objetivos ?: 'No se registraron objetivos.',
@@ -297,7 +305,9 @@ class SupervisorController extends Controller
                     'conclusiones' => $inf->conclusiones ?: 'No se registraron conclusiones.',
                     'archivo_url' => $inf->archivo_url,
                     'estado' => $inf->estado,
-                    'observaciones' => $inf->observaciones
+                    'observaciones' => $inf->observaciones,
+                    'bitacora' => $inf->bitacora,
+                    'imagenes' => $inf->imagenes
                 ];
             });
 
@@ -402,9 +412,12 @@ class SupervisorController extends Controller
         $pasantes = $pasantesQuery->get()->map(function($p) {
             return [
                 'id' => $p->id,
-                'nombre' => ($p->usuario->nombres ?? '') . ' ' . ($p->usuario->apellidos ?? ''),
+                'pasante_id' => $p->id,
+                'nombre' => $p->usuario->nombres ?? '',
+                'apellido' => $p->usuario->apellidos ?? '',
                 'correo' => $p->usuario->correo_institucional ?? '',
                 'area' => $p->area,
+                'estado' => $p->estado,
                 'fase_actual' => $p->fase_actual,
                 'horas_aprobadas' => $p->horas_aprobadas
             ];

@@ -14,9 +14,11 @@ Route::prefix('api')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])->name('api.login');
     Route::post('/auth/registro', [AuthController::class, 'registro'])->name('api.registro');
     Route::post('/auth/enviar-codigo', [AuthController::class, 'enviarCodigo'])->name('api.enviarCodigo');
+    Route::post('/auth/verificar-codigo', [AuthController::class, 'verificarCodigo'])->name('api.verificarCodigo');
     Route::post('/auth/recuperar', [AuthController::class, 'recuperar'])->name('api.recuperar');
     
     // Rutas de Pasante
+    Route::get('/informes/{id}/pdf', [PasanteController::class, 'verPdf']);
     Route::prefix('pasante')->group(function () {
         Route::get('/perfil', [PasanteController::class, 'getPerfil']);
         Route::post('/cv', [PasanteController::class, 'subirCV']);

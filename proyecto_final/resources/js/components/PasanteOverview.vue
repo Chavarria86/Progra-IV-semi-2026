@@ -110,17 +110,7 @@
         <div class="shortcut-arrow"><i class="bi bi-arrow-right-short"></i></div>
       </div>
 
-      <div class="shortcut-card" @click="solicitarSupervisor" :class="{ 'disabled-card': solicitando }">
-        <div class="shortcut-icon bg-orange">
-          <span v-if="solicitando" class="spinner-border spinner-border-sm"></span>
-          <i v-else class="bi bi-person-raised-hand"></i>
-        </div>
-        <div class="shortcut-info">
-          <h5>Solicitar Supervisor</h5>
-          <p>Pide asignación a un supervisor para iniciar tus prácticas.</p>
-        </div>
-        <div class="shortcut-arrow"><i class="bi bi-arrow-right-short"></i></div>
-      </div>
+
     </div>
   </div>
 </template>
@@ -136,7 +126,6 @@ const props = defineProps({
 
 const emit = defineEmits(['cambiarSeccion', 'abrirWizard']);
 
-const solicitando = ref(false);
 const supervisorData = ref(null);
 const notificaciones = ref([]);
 const cargandoSupervisor = ref(false);
@@ -160,27 +149,6 @@ const cargarSupervisor = async () => {
     console.error('Error cargando supervisor:', err);
   } finally {
     cargandoSupervisor.value = false;
-  }
-};
-
-const solicitarSupervisor = async () => {
-  if (solicitando.value) return;
-  solicitando.value = true;
-  try {
-    const res = await axios.post('/api/pasante/solicitar-supervisor', {
-      mensaje: 'Solicito asignación a su supervisión para iniciar mi proceso de pasantía.'
-    }, {
-      headers: { 'X-User-Id': props.usuario?.id || 4 }
-    });
-    alertify.success('Solicitud enviada exitosamente.');
-  } catch (err) {
-    if (err.response?.status === 409) {
-      alertify.warning('Ya tienes una solicitud pendiente.');
-    } else {
-      alertify.error('Error al enviar la solicitud.');
-    }
-  } finally {
-    solicitando.value = false;
   }
 };
 

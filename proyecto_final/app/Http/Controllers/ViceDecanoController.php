@@ -109,9 +109,13 @@ class ViceDecanoController extends Controller
                     'actividades' => $i->actividades,
                     'conclusiones' => $i->conclusiones,
                     'created_at' => $i->created_at,
+                    'fecha_inicio' => $i->fecha_inicio ? \Carbon\Carbon::parse($i->fecha_inicio)->format('d M Y') : null,
+                    'fecha_fin' => $i->fecha_fin ? \Carbon\Carbon::parse($i->fecha_fin)->format('d M Y') : null,
                     'pasante_nombre' => $i->pasante->usuario->nombres ?? '',
                     'pasante_apellido' => $i->pasante->usuario->apellidos ?? '',
-                    'area' => $i->pasante->area ?? ''
+                    'area' => $i->pasante->area ?? '',
+                    'bitacora' => $i->bitacora,
+                    'imagenes' => $i->imagenes
                 ];
             });
 

@@ -643,10 +643,28 @@
                         if(prevInput) prevInput.focus();
                     }
                 },
-                avanzarPaso3() {
+                async avanzarPaso3() {
                     this.recuperarForm.codigo = this.codigoArray.join('');
                     if (this.recuperarForm.codigo.length === 6) {
-                        this.pasoRecuperacion = 3;
+                        this.cargando = true;
+                        try {
+                            const response = await api.post('/auth/verificar-codigo', {
+                                correo: this.recuperarForm.correo,
+                                codigo: this.recuperarForm.codigo
+                            });
+                            alertify.success(response.data.mensaje || 'Código verificado con éxito.');
+                            this.pasoRecuperacion = 3;
+                        } catch (error) {
+                            let msg = 'El código de verificación es incorrecto.';
+                            if (error.response && error.response.data && error.response.data.mensaje) {
+                                msg = error.response.data.mensaje;
+                            }
+                            alertify.error(msg);
+                        } finally {
+                            this.cargando = false;
+                        }
+                    } else {
+                        alertify.warning('Por favor, ingresa el código completo de 6 dígitos.');
                     }
                 },
                 async iniciarSesion() {

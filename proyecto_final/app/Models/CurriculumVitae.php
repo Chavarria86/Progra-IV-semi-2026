@@ -16,6 +16,7 @@ class CurriculumVitae extends Model
         'url_publica',
         'nombre_completo',
         'profesion',
+        'foto_url',
         'direccion',
         'email',
         'telefono',

@@ -113,12 +113,10 @@ const navItems = computed(() => {
   if (rol === 'supervisor') {
     return [
       { seccion: 'dashboard',        label: 'Dashboard',           icon: 'bi bi-grid-fill' },
-      { seccion: 'solicitudes',       label: 'Solicitudes',         icon: 'bi bi-person-plus-fill' },
       { seccion: 'validar_cv',        label: 'Validar CVs',         icon: 'bi bi-check2-square' },
       { seccion: 'mis_pasantes',      label: 'Mis Pasantes',        icon: 'bi bi-people-fill' },
       { seccion: 'evaluar_informes',  label: 'Evaluar Informes',    icon: 'bi bi-file-earmark-check-fill' },
       { seccion: 'ver_vacantes',      label: 'Sugerir Vacantes',    icon: 'bi bi-building-fill-add' },
-      { seccion: 'recomendaciones',   label: 'Recomendaciones',     icon: 'bi bi-award-fill' },
       { seccion: 'chat_ia',           label: 'Análisis IA',         icon: 'bi bi-search-heart' },
       { seccion: 'configuracion',     label: 'Configuración',       icon: 'bi bi-gear-fill' },
       { seccion: 'logout',            label: 'Cerrar sesión',       icon: 'bi bi-box-arrow-left', logout: true },
@@ -167,7 +165,6 @@ const formatTitle = (seccion) => {
     solicitudes:          'Solicitudes de Pasantes',
     evaluar_informes:     'Evaluar Informes y Validar Horas',
     ver_vacantes:         'Sugerir Vacantes a Pasantes',
-    recomendaciones:      'Recomendaciones para Pasantes',
     evaluar_informe:      'Evaluar Informes Finales',
     estadisticas:         'Estadísticas Generales',
     crear_vacantes:       'Crear Nuevas Vacantes',

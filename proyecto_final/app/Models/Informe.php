@@ -23,10 +23,16 @@ class Informe extends Model
         'objetivos',
         'actividades',
         'conclusiones',
+        'fecha_inicio',
+        'fecha_fin',
+        'bitacora',
+        'imagenes',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
+        'bitacora' => 'array',
+        'imagenes' => 'array',
     ];
 
     /**

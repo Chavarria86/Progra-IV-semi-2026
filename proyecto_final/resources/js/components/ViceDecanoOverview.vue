@@ -14,25 +14,15 @@
       </svg>
     </button>
 
-    <!-- ── HERO BANNER con SVG animado ─────────────── -->
-    <div class="hero-banner">
-      <div class="hero-bg">
-        <svg class="hero-svg" viewBox="0 0 440 200" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-          <g class="geo-layer">
-            <path d="M188 155L189 155C196 148 206 139 220 128C233 117 243 108 250 101C256 94 261 87 263 80C266 72 265 64 260 56C255 47 247 39 237 34C228 28 218 25 207 25C197 25 190 28 187 33C184 39 185 46 190 56L126 56C116 40 112 25 114 13C115 1 122 -8 133 -15C144 -22 159 -26 177 -26C197 -26 216 -22 235 -15C254 -8 271 2 287 13C303 25 315 40 325 56C333 71 337 84 336 95C335 106 331 116 325 125C318 133 308 143 295 156L377 156L406 206L217 206L188 155Z" :fill="isDark ? '#3D0A00' : '#F8B803'" opacity="0.7"/>
-            <path d="M9 126L-14 126L-43 76L43 76L176 206L113 206L9 126Z" :fill="isDark ? '#3D0A00' : '#F8B803'" opacity="0.7"/>
-          </g>
-          <g class="geo-layer-overlay" style="mix-blend-mode: hard-light">
-            <path d="M217 105L218 105C225 98 235 89 249 78C262 67 272 58 279 51C285 44 290 37 292 29C294 21 293 14 288 6C283 -3 276 -11 266 -17C257 -22 247 -25 236 -25C226 -25 219 -22 216 -17C213 -11 214 -4 219 6L155 6C145 -10 141 -25 143 -38C144 -50 151 -60 162 -67C173 -74 188 -78 206 -78C226 -78 245 -74 264 -67C283 -60 300 -50 316 -38C332 -25 344 -10 354 6C362 21 366 34 365 45C364 57 360 66 354 75C347 84 337 94 324 105L406 105L435 155L246 155L217 105Z" :fill="isDark ? '#67000F' : '#F0ACB8'" opacity="0.6"/>
-          </g>
-        </svg>
-
-        <div class="hero-logo">
-          <img src="/images/logo_ugb.png" alt="Logo UGB" class="ugb-logo-img">
-          <div class="hero-title-group">
-            <h1 class="hero-title">Panel del Vice Decano</h1>
-            <p class="hero-subtitle">Génesis Profesional · Sistema de Pasantías</p>
-          </div>
+    <!-- Welcome Card -->
+    <div class="welcome-card">
+      <div class="welcome-left">
+        <h3>¡Bienvenido, Vice Decano!</h3>
+        <p>Administra las vacantes del sistema, asigna supervisores y evalúa los informes finales de pasantías.</p>
+      </div>
+      <div class="welcome-right">
+        <div class="welcome-crest">
+          <i class="bi bi-shield-shaded"></i>
         </div>
       </div>
     </div>
@@ -125,40 +115,38 @@ defineEmits(['toggleDark']);
 .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .theme-toggle svg { width: 16px; height: 16px; }
 
-/* ─── Hero Banner ────────────────────── */
-.hero-banner {
-  width: 100%;
+/* Welcome Card */
+.welcome-card {
+  background: linear-gradient(135deg, #67000f 0%, #3a0005 100%);
+  border-radius: 14px;
+  padding: 30px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 28px;
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: 0 10px 25px -5px rgba(103, 0, 15, 0.25);
+  transition: background 0.3s;
 }
-.hero-bg {
-  position: relative;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 32px 32px 24px;
-  overflow: hidden;
-  min-height: 140px;
+.welcome-left h3 {
+  font-family: 'Lora', serif;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 8px;
 }
-.hero-svg {
-  position: absolute; top: 0; right: 0;
-  width: 55%; height: 100%;
+.welcome-left p {
+  font-size: 14px;
   opacity: 0.85;
-  pointer-events: none;
+  max-width: 680px;
+  margin: 0;
+  line-height: 1.55;
 }
-.hero-logo {
-  position: relative; z-index: 2;
-  display: flex; align-items: center; gap: 20px;
-}
-.ugb-logo-img { width: 90px; height: 45px; object-fit: contain; flex-shrink: 0; }
-.hero-title {
-  font-size: 1.5rem; font-weight: 700;
-  color: var(--text); margin: 0 0 4px;
-}
-.hero-subtitle {
-  font-size: 0.85rem; color: var(--sub); margin: 0;
+.welcome-crest {
+  font-size: 60px;
+  color: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ─── Stats ──────────────────────────── */
@@ -225,17 +213,23 @@ defineEmits(['toggleDark']);
 .activity-tag.aprobado { background: #DCFCE7; color: #16A34A; }
 .activity-tag.correccion { background: #FEF3C7; color: #D97706; }
 
+@media (max-width: 768px) {
+  .welcome-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+    padding: 20px;
+  }
+  .welcome-crest {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .stats-row { grid-template-columns: 1fr; }
-  .hero-svg { width: 70%; opacity: 0.4; }
 }
 
 @media (max-width: 576px) {
-  .hero-logo {
-    flex-direction: column;
-    text-align: center;
-    gap: 12px;
-  }
   .activity-item {
     flex-direction: column;
     align-items: flex-start;

@@ -202,10 +202,11 @@ class AuthController extends Controller
              'creado_en' => now()]
         );
 
-        // ✅ Intentar enviar el código al correo real del usuario
+        // ✅ Intentar enviar el código al correo real del usuario (usando un desvío si está configurado en .env)
         $emailEnviado = false;
+        $destinatario = env('MAIL_TO_ADDRESS') ?: $correo;
         try {
-            Mail::to($correo)->send(new CodigoRecuperacionMail($codigoPlano, $correo));
+            Mail::to($destinatario)->send(new CodigoRecuperacionMail($codigoPlano, $correo));
             $emailEnviado = true;
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error enviando correo: ' . $e->getMessage());
@@ -260,19 +261,48 @@ class AuthController extends Controller
 
         $nuevaPassword = Hash::make($request->nuevaContrasena);
 
-        // Actualizar en tabla usuarios (pasantes)
+        // Actualizar en tabla usuarios (pasantes y personal administrativo)
         $actualizadoUsuarios = Usuario::where('correo_institucional', $correo)
             ->update(['password' => $nuevaPassword]);
 
-        // Si no se actualizó en usuarios, intentar en personal_administrativo
-        if (!$actualizadoUsuarios) {
-            PersonalAdministrativo::where('correo_institucional', $correo)
-                ->update(['password' => $nuevaPassword]);
+        // Actualizar también en la tabla personal_administrativo para mantener consistencia
+        $actualizadoAdmin = PersonalAdministrativo::where('correo_institucional', $correo)
+            ->update(['password' => $nuevaPassword]);
+
+        if (!$actualizadoUsuarios && !$actualizadoAdmin) {
+            return response()->json(['mensaje' => 'No se encontró la cuenta para actualizar la contraseña.'], 404);
         }
 
         // Eliminar el código usado
         RecuperacionCodigo::where('correo', $correo)->delete();
 
         return response()->json(['mensaje' => 'Contraseña restablecida con éxito. Ya puedes iniciar sesión.']);
+    }
+
+    public function verificarCodigo(Request $request)
+    {
+        $request->validate([
+            'correo' => 'required|email',
+            'codigo' => 'required|string|size:6'
+        ]);
+
+        $correo = strtolower($request->correo);
+
+        // Buscar el registro del código
+        $registroCodigo = RecuperacionCodigo::where('correo', $correo)->first();
+
+        // Verificar que existe y que el código en texto plano coincide con el hash guardado
+        if (!$registroCodigo || !Hash::check($request->codigo, $registroCodigo->codigo)) {
+            return response()->json(['mensaje' => 'El código de verificación es incorrecto.'], 400);
+        }
+
+        // Verificar expiración (15 minutos)
+        $creadoEn = \Carbon\Carbon::parse($registroCodigo->creado_en);
+        if ($creadoEn->diffInMinutes(now()) > 15) {
+            RecuperacionCodigo::where('correo', $correo)->delete();
+            return response()->json(['mensaje' => 'El código ha expirado. Solicita uno nuevo.'], 400);
+        }
+
+        return response()->json(['mensaje' => 'Código verificado con éxito.']);
     }
 }

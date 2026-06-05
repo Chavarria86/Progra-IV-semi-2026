@@ -55,11 +55,19 @@
         </div>
       </div>
       
-      <div v-else class="alert alert-custom-success d-flex align-items-center" role="alert">
+      <div v-else-if="horasAprobadas > 0" class="alert alert-custom-success d-flex align-items-center" role="alert">
         <i class="bi bi-check-circle-fill fs-3 me-3 text-success"></i>
         <div>
           <h6 class="alert-heading fw-bold mb-1">¡Todo al día!</h6>
           <p class="mb-0 small text-muted">Todas tus horas reportadas han sido validadas por tu supervisor.</p>
+        </div>
+      </div>
+
+      <div v-else class="alert alert-custom-info d-flex align-items-center" role="alert">
+        <i class="bi bi-info-circle-fill fs-3 me-3 text-info"></i>
+        <div>
+          <h6 class="alert-heading fw-bold mb-1">Sin Informes Registrados</h6>
+          <p class="mb-0 small text-muted">Aún no has registrado ningún informe de horas. Ve a la sección de <strong>Informes</strong> para comenzar a reportar tu progreso.</p>
         </div>
       </div>
 
@@ -142,6 +150,12 @@ const porcentajePendiente = computed(() => {
   border: 1px solid #bbf7d0;
   border-radius: 10px;
   color: #166534;
+}
+.alert-custom-info {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  color: #0369a1;
 }
 
 @media (max-width: 768px) {

@@ -46,6 +46,29 @@ class CvController extends Controller
 
         $urlPublica = "/storage/{$ruta}";
 
+        // Procesar foto de perfil
+        $fotoUrl = null;
+        if (isset($request->perfil['fotoUrl']) && !empty($request->perfil['fotoUrl'])) {
+            $fotoData = $request->perfil['fotoUrl'];
+            // Si es una imagen codificada en base64
+            if (preg_match('#^data:image/(\w+);base64,#i', $fotoData, $matches)) {
+                $ext = strtolower($matches[1]);
+                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                    $ext = 'png';
+                }
+                $fotoDecoded = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $fotoData));
+                $nombreFoto = 'foto_' . time() . '.' . $ext;
+                $carpetaFoto = "cv_fotos/{$usuarioId}";
+                $rutaFoto = "{$carpetaFoto}/{$nombreFoto}";
+                
+                Storage::disk('public')->put($rutaFoto, $fotoDecoded);
+                $fotoUrl = "/storage/{$rutaFoto}";
+            } else {
+                // Si ya es una URL existente en el servidor o externa
+                $fotoUrl = $fotoData;
+            }
+        }
+
         $data = [
             'usuario_id'       => $usuarioId,
             'titulo_cv'        => $tituloCv,
@@ -54,6 +77,7 @@ class CvController extends Controller
             'url_publica'      => $urlPublica,
             'nombre_completo'  => $request->perfil['nombre']          ?? null,
             'profesion'        => $request->perfil['profesion']       ?? null,
+            'foto_url'         => $fotoUrl,
             'direccion'        => $request->perfil['direccion']        ?? null,
             'email'            => $request->perfil['email']            ?? null,
             'telefono'         => $request->perfil['telefono']         ?? null,
@@ -75,6 +99,14 @@ class CvController extends Controller
         if ($cvId) {
             $cv = CurriculumVitae::find($cvId);
             if ($cv) {
+                // Eliminar foto física anterior si cambió y existía en public storage
+                if ($cv->foto_url && $cv->foto_url !== $fotoUrl) {
+                    $oldFotoPath = str_replace('/storage/', '', $cv->foto_url);
+                    if (Storage::disk('public')->exists($oldFotoPath)) {
+                        Storage::disk('public')->delete($oldFotoPath);
+                    }
+                }
+
                 // Eliminar archivo físico anterior si existe
                 if ($cv->ruta_archivo) {
                     Storage::disk('public')->delete($cv->ruta_archivo);

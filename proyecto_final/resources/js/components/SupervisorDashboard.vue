@@ -26,17 +26,6 @@
       :usuario="usuario"
     />
 
-    <!-- ── Solicitudes de Pasantes ── -->
-    <SupervisorSolicitudes
-      v-else-if="seccionActiva === 'solicitudes'"
-      :usuario="usuario"
-    />
-
-    <!-- ── Recomendaciones ── -->
-    <SupervisorRecomendaciones
-      v-else-if="seccionActiva === 'recomendaciones'"
-      :usuario="usuario"
-    />
 
     <!-- ── Mis Pasantes ── -->
     <div v-else-if="seccionActiva === 'mis_pasantes'" class="mis-pasantes-view animate-fade-in">
@@ -56,10 +45,7 @@
             <label class="form-label small fw-bold text-muted mb-1">Área Especialidad</label>
             <select class="form-select" v-model="filtros.area">
               <option value="">Todas las áreas</option>
-              <option value="desarrollo">Desarrollo de Software</option>
-              <option value="diseño">Diseño UI/UX</option>
-              <option value="infraestructura">Infraestructura</option>
-              <option value="seguridad">Seguridad Informática</option>
+              <option v-for="area in areasDisponibles" :key="area" :value="area">{{ area }}</option>
             </select>
           </div>
           <div>
@@ -70,11 +56,9 @@
               <option value="aprobado">Aprobado / Culminado</option>
             </select>
           </div>
-          <div>
-            <button class="btn btn-outline-secondary h-100 px-3" @click="limpiarFiltros" title="Limpiar Filtros">
-              <i class="bi bi-eraser-fill"></i>
-            </button>
-          </div>
+          <button class="btn btn-outline-secondary px-3" @click="limpiarFiltros" style="height: 38px;" title="Limpiar Filtros">
+            <i class="bi bi-eraser-fill"></i>
+          </button>
         </div>
 
         <div v-if="cargandoPasantes" class="text-center py-5">
@@ -149,8 +133,6 @@ import SupervisorOverview from './SupervisorOverview.vue';
 import SupervisorValidarCv from './SupervisorValidarCv.vue';
 import SupervisorAsignarVacante from './SupervisorAsignarVacante.vue';
 import SupervisorEvaluarInformes from './SupervisorEvaluarInformes.vue';
-import SupervisorSolicitudes from './SupervisorSolicitudes.vue';
-import SupervisorRecomendaciones from './SupervisorRecomendaciones.vue';
 import SupervisorSugerirVacante from './SupervisorSugerirVacante.vue';
 
 const props = defineProps({ seccionActiva: String });
@@ -215,13 +197,24 @@ const limpiarFiltros = () => {
 
 const pasantesFiltrados = computed(() => {
   return pasantes.value.filter(p => {
-    const matchBusqueda = p.nombre.toLowerCase().includes(filtros.value.busqueda.toLowerCase()) || 
-                          p.apellido.toLowerCase().includes(filtros.value.busqueda.toLowerCase()) || 
-                          p.correo.toLowerCase().includes(filtros.value.busqueda.toLowerCase());
-    const matchArea = filtros.value.area === '' || p.area.toLowerCase() === filtros.value.area.toLowerCase();
-    const matchEstado = filtros.value.estado === '' || p.estado === filtros.value.estado;
+    const busqueda = (filtros.value.busqueda || '').toLowerCase();
+    const matchBusqueda = (p.nombre && p.nombre.toLowerCase().includes(busqueda)) || 
+                          (p.apellido && p.apellido.toLowerCase().includes(busqueda)) || 
+                          (p.correo && p.correo.toLowerCase().includes(busqueda));
+    
+    const matchArea = filtros.value.area === '' || 
+                      (p.area && p.area.toLowerCase() === filtros.value.area.toLowerCase());
+    
+    const matchEstado = filtros.value.estado === '' || 
+                        (p.estado && p.estado === filtros.value.estado);
+    
     return matchBusqueda && matchArea && matchEstado;
   });
+});
+
+const areasDisponibles = computed(() => {
+  const list = pasantes.value.map(p => p.area).filter(Boolean);
+  return [...new Set(list)];
 });
 
 const actualizarEstadoPasante = (pasante, nuevoEstado) => {

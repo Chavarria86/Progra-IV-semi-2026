@@ -244,9 +244,9 @@
             @focus="mostrarDropdownAdjuntos = false"
           >
           
-          <button type="submit" class="btn btn-primary-custom px-4" :disabled="!nuevoMensajeText.trim() || enviandoMensaje" style="height: 44px; border-radius: 22px;">
-            <i class="bi bi-send-fill me-1"></i>
-            <span class="d-none d-sm-inline">Enviar</span>
+          <button type="submit" class="btn btn-primary-custom px-4 d-flex align-items-center justify-content-center gap-2" :disabled="!nuevoMensajeText.trim() || enviandoMensaje" style="height: 44px; border-radius: 22px;">
+            <i class="bi bi-send-fill" style="line-height: 1;"></i>
+            <span class="d-none d-sm-inline" style="line-height: 1;">Enviar</span>
           </button>
         </form>
       </div>

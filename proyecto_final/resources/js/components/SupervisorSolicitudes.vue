@@ -1,144 +1,65 @@
 <template>
   <div class="solicitudes-view animate-fade-in">
     <div class="dashboard-section-card">
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-        <h5 class="card-title m-0"><i class="bi bi-person-plus-fill text-primary"></i> Gestión de Solicitudes</h5>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 border-bottom pb-3">
+        <h5 class="card-title m-0"><i class="bi bi-person-plus-fill text-primary"></i> Postulaciones a Vacantes</h5>
       </div>
       
-      <!-- Main Tabs -->
-      <ul class="nav nav-tabs mb-4">
-        <li class="nav-item">
-          <a class="nav-link fw-bold" :class="{ active: mainTab === 'asignaciones' }" @click.prevent="mainTab = 'asignaciones'" href="#">Asignación de Pasantes</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link fw-bold" :class="{ active: mainTab === 'postulaciones' }" @click.prevent="mainTab = 'postulaciones'" href="#">Postulaciones a Vacantes</a>
-        </li>
-      </ul>
+      <p class="text-muted small mb-4">Revisa las postulaciones de tus pasantes a diferentes vacantes. Debes aprobarlas para que lleguen al Vicedecano.</p>
 
-      <!-- ================= ASIGNACIONES ================= -->
-      <div v-if="mainTab === 'asignaciones'">
-        <p class="text-muted small mb-4">Aquí aparecen los pasantes que han solicitado ser asignados a tu supervisión. Puedes aceptar o rechazar cada solicitud.</p>
-
-        <div v-if="cargandoSolicitudes" class="text-center py-4">
-          <span class="spinner-border text-primary"></span>
-        </div>
-        <div v-else-if="solicitudesPendientes.length === 0" class="text-center py-5 bg-light rounded border text-muted">
-          <i class="bi bi-inbox d-block fs-1 mb-3 text-secondary"></i>
-          <span>No tienes solicitudes de asignación pendientes.</span>
-        </div>
-        <div v-else class="solicitudes-grid">
-          <div v-for="sol in solicitudesPendientes" :key="sol.id" class="solicitud-card border rounded p-4 mb-3">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-              <div class="d-flex align-items-center gap-3">
-                <div class="pasante-avatar">{{ sol.nombre.charAt(0) }}{{ sol.apellido.charAt(0) }}</div>
-                <div>
-                  <h6 class="fw-bold mb-0 text-dark">{{ sol.nombre }} {{ sol.apellido }}</h6>
-                  <small class="text-muted"><i class="bi bi-envelope me-1"></i>{{ sol.correo }}</small>
-                </div>
-              </div>
+      <div v-if="cargandoPostulaciones" class="text-center py-4">
+        <span class="spinner-border text-primary"></span>
+      </div>
+      <div v-else-if="postulacionesPendientes.length === 0" class="text-center py-5 bg-light rounded border text-muted">
+        <i class="bi bi-inbox d-block fs-1 mb-3 text-secondary"></i>
+        <span>No tienes postulaciones pendientes de revisión.</span>
+      </div>
+      <div v-else class="solicitudes-grid">
+        <div v-for="post in postulacionesPendientes" :key="post.id" class="solicitud-card border rounded p-4 mb-3">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h6 class="fw-bold mb-1 text-dark"><i class="bi bi-person-circle me-2"></i>{{ post.pasante }}</h6>
+              <p class="mb-0 text-primary fw-semibold"><i class="bi bi-building me-2"></i>{{ post.vacante }}</p>
             </div>
+            <a v-if="post.cv_url" :href="post.cv_url" target="_blank" class="btn btn-sm btn-outline-primary">Ver CV</a>
+          </div>
 
-            <div class="solicitud-mensaje p-3 bg-light rounded border-start border-primary border-3 mb-3">
-              <p class="small text-muted mb-0 fst-italic">"{{ sol.mensaje }}"</p>
+          <div class="d-flex justify-content-between align-items-center mt-4">
+            <small class="text-muted"><i class="bi bi-calendar3 me-1"></i> Postulado: {{ post.fecha }}</small>
+            <div v-if="usuario.rol === 'vice_decano'" class="badge bg-info text-dark px-3 py-2 small">
+              <i class="bi bi-info-circle-fill me-1"></i> Modo Vista
             </div>
-
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-              <small class="text-muted"><i class="bi bi-calendar3 me-1"></i> Enviado: {{ sol.fecha }}</small>
-              <div v-if="usuario.rol === 'vice_decano'" class="badge bg-info text-dark px-3 py-2 small">
-                <i class="bi bi-info-circle-fill me-1"></i> Modo Vista
-              </div>
-              <div v-else class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-danger" @click="responderAsignacion(sol, 'rechazar')" :disabled="procesando === sol.id">
-                  <i class="bi bi-x-circle me-1"></i> Rechazar
-                </button>
-                <button class="btn btn-sm btn-success" @click="responderAsignacion(sol, 'aceptar')" :disabled="procesando === sol.id">
-                  <span v-if="procesando === sol.id" class="spinner-border spinner-border-sm me-1"></span>
-                  <i v-else class="bi bi-check-circle me-1"></i> Aceptar
-                </button>
-              </div>
+            <div v-else class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-danger" @click="responderPostulacion(post, 'rechazar')" :disabled="procesando === post.id">
+                <i class="bi bi-x-circle me-1"></i> Rechazar
+              </button>
+              <button class="btn btn-sm btn-success" @click="responderPostulacion(post, 'aceptar')" :disabled="procesando === post.id">
+                <span v-if="procesando === post.id" class="spinner-border spinner-border-sm me-1"></span>
+                <i v-else class="bi bi-check-circle me-1"></i> Aprobar para Vicedecano
+              </button>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- ================= POSTULACIONES ================= -->
-      <div v-if="mainTab === 'postulaciones'">
-        <p class="text-muted small mb-4">Revisa las postulaciones de tus pasantes a diferentes vacantes. Debes aprobarlas para que lleguen al Vicedecano.</p>
-
-        <div v-if="cargandoPostulaciones" class="text-center py-4">
-          <span class="spinner-border text-primary"></span>
-        </div>
-        <div v-else-if="postulacionesPendientes.length === 0" class="text-center py-5 bg-light rounded border text-muted">
-          <i class="bi bi-inbox d-block fs-1 mb-3 text-secondary"></i>
-          <span>No tienes postulaciones pendientes de revisión.</span>
-        </div>
-        <div v-else class="solicitudes-grid">
-          <div v-for="post in postulacionesPendientes" :key="post.id" class="solicitud-card border rounded p-4 mb-3">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-              <div>
-                <h6 class="fw-bold mb-1 text-dark"><i class="bi bi-person-circle me-2"></i>{{ post.pasante }}</h6>
-                <p class="mb-0 text-primary fw-semibold"><i class="bi bi-building me-2"></i>{{ post.vacante }}</p>
-              </div>
-              <a v-if="post.cv_url" :href="post.cv_url" target="_blank" class="btn btn-sm btn-outline-primary">Ver CV</a>
-            </div>
-
-            <div class="d-flex justify-content-between align-items-center mt-4">
-              <small class="text-muted"><i class="bi bi-calendar3 me-1"></i> Postulado: {{ post.fecha }}</small>
-              <div v-if="usuario.rol === 'vice_decano'" class="badge bg-info text-dark px-3 py-2 small">
-                <i class="bi bi-info-circle-fill me-1"></i> Modo Vista
-              </div>
-              <div v-else class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-danger" @click="responderPostulacion(post, 'rechazar')" :disabled="procesando === post.id">
-                  <i class="bi bi-x-circle me-1"></i> Rechazar
-                </button>
-                <button class="btn btn-sm btn-success" @click="responderPostulacion(post, 'aceptar')" :disabled="procesando === post.id">
-                  <span v-if="procesando === post.id" class="spinner-border spinner-border-sm me-1"></span>
-                  <i v-else class="bi bi-check-circle me-1"></i> Aprobar para Vicedecano
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
   usuario: { type: Object, default: () => ({}) }
 });
 
-const mainTab = ref('asignaciones');
 const procesando = ref(null);
-const cargandoSolicitudes = ref(true);
 const cargandoPostulaciones = ref(true);
-
-const solicitudesPendientes = ref([]);
 const postulacionesPendientes = ref([]);
 
 onMounted(() => {
-  cargarSolicitudes();
   cargarPostulaciones();
 });
-
-const cargarSolicitudes = async () => {
-  cargandoSolicitudes.value = true;
-  try {
-    const res = await axios.get('/api/supervisor/solicitudes', {
-      headers: { 'X-User-Id': props.usuario?.id || 2 }
-    });
-    solicitudesPendientes.value = (res.data.solicitudes || []).filter(s => s.estado === 'pendiente');
-  } catch (err) {
-    console.error('Error al cargar solicitudes:', err);
-  } finally {
-    cargandoSolicitudes.value = false;
-  }
-};
 
 const cargarPostulaciones = async () => {
   cargandoPostulaciones.value = true;
@@ -151,22 +72,6 @@ const cargarPostulaciones = async () => {
     console.error('Error al cargar postulaciones:', err);
   } finally {
     cargandoPostulaciones.value = false;
-  }
-};
-
-const responderAsignacion = async (sol, decision) => {
-  procesando.value = sol.id;
-  try {
-    await axios.put(`/api/supervisor/solicitudes/${sol.id}/responder`, { decision }, {
-      headers: { 'X-User-Id': props.usuario?.id || 2 }
-    });
-    solicitudesPendientes.value = solicitudesPendientes.value.filter(s => s.id !== sol.id);
-    if (decision === 'aceptar') alertify.success('Solicitud aceptada.');
-    else alertify.warning('Solicitud rechazada.');
-  } catch (err) {
-    alertify.error('Error al procesar solicitud.');
-  } finally {
-    procesando.value = null;
   }
 };
 

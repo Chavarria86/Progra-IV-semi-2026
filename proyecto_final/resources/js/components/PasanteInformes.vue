@@ -47,7 +47,12 @@
             </thead>
             <tbody>
               <tr v-for="inf in informesFiltrados" :key="inf.id">
-                <td class="fw-semibold text-dark">{{ inf.nombre || ('Reporte de ' + (inf.horas || 0) + ' horas') }}</td>
+                <td class="fw-semibold text-dark">
+                  <div>{{ inf.nombre || ('Reporte de ' + (inf.horas || 0) + ' horas') }}</div>
+                  <small v-if="inf.fecha_inicio && inf.fecha_fin" class="text-muted d-block mt-1">
+                    <i class="bi bi-calendar-range me-1"></i> Período: {{ formatearFechaSencilla(inf.fecha_inicio) }} al {{ formatearFechaSencilla(inf.fecha_fin) }}
+                  </small>
+                </td>
                 <td>
                   <span class="badge rounded-pill" :class="inf.tipo === 'final' ? 'bg-primary' : 'bg-secondary'">
                     {{ inf.tipo === 'final' ? 'Informe Final' : 'Informe Mensual' }}
@@ -85,16 +90,36 @@
       <div class="dashboard-section-card max-w-900 mx-auto">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 border-bottom pb-3">
           <h4 class="fw-bold m-0"><i class="bi bi-pencil-square text-accent"></i> {{ editandoId ? 'Editar Informe' : 'Redactar Nuevo Informe' }}</h4>
-          <div class="action-buttons d-flex gap-2">
-            <button class="btn-ds-back-outline" @click="cerrarFormulario"><i class="bi bi-arrow-left me-1"></i> Atrás</button>
-          </div>
+          <button type="button" class="btn-cerrar-modal" @click="cerrarFormulario" title="Cerrar"><i class="bi bi-x-lg"></i></button>
         </div>
 
         <form @submit.prevent="guardarInforme">
+          <div v-if="editandoId && nuevoInforme.observaciones" class="alert alert-warning border-warning p-3 mb-4 rounded-3 d-flex align-items-start gap-3">
+            <i class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
+            <div>
+              <h6 class="fw-bold text-warning-emphasis mb-1">El supervisor solicitó correcciones para este informe</h6>
+              <p class="mb-0 small text-dark-emphasis">
+                <strong>Detalle de las observaciones:</strong> {{ obtenerDetalleObservacion(nuevoInforme.observaciones) }}
+              </p>
+              <div v-if="obtenerSeccionesObservacion(nuevoInforme.observaciones).length > 0" class="mt-2">
+                <span class="small fw-bold text-warning-emphasis d-block mb-1">Secciones a corregir:</span>
+                <div class="d-flex gap-2 flex-wrap">
+                  <span v-for="sec in obtenerSeccionesObservacion(nuevoInforme.observaciones)" :key="sec" class="badge bg-danger text-white px-2 py-1">
+                    {{ traduccirSeccion(sec) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="row">
             <div class="col-md-6 mb-4">
-              <label class="form-label fw-bold">Nombre del Informe</label>
-              <input type="text" class="form-control form-control-lg" v-model="nuevoInforme.nombre" placeholder="Ej: Informe Mensual - Mayo 2026" required>
+              <label class="form-label fw-bold" :class="{ 'text-danger': tieneCorreccionEn('nombre') }">
+                Nombre del Informe
+                <span v-if="tieneCorreccionEn('nombre')" class="text-danger small fw-semibold ms-1">(Requiere Corrección)</span>
+              </label>
+              <input type="text" class="form-control form-control-lg" :class="{ 'is-invalid border-danger': tieneCorreccionEn('nombre') }" v-model="nuevoInforme.nombre" placeholder="Ej: Informe Mensual - Mayo 2026" required>
+              <div v-if="tieneCorreccionEn('nombre')" class="invalid-feedback text-danger">El supervisor solicitó corregir esta sección.</div>
             </div>
             <div class="col-md-3 mb-4">
               <label class="form-label fw-bold">Tipo de Informe</label>
@@ -104,42 +129,177 @@
               </select>
             </div>
             <div class="col-md-3 mb-4">
-              <label class="form-label fw-bold">Horas a Reportar</label>
+              <label class="form-label fw-bold" :class="{ 'text-danger': tieneCorreccionEn('horas') }">
+                Horas a Reportar
+                <span v-if="tieneCorreccionEn('horas')" class="text-danger small fw-semibold ms-1">(Requiere Corrección)</span>
+              </label>
               <input
                 type="number"
                 min="0.01"
                 step="0.01"
                 max="600"
                 class="form-control form-control-lg"
-                :class="{ 'is-invalid': horasError }"
+                :class="{ 'is-invalid': horasError || tieneCorreccionEn('horas') }"
                 v-model.number="nuevoInforme.horas"
                 placeholder="Ej: 80"
                 required
                 @input="horasError = false"
               >
               <div class="invalid-feedback" v-if="horasError">Debes ingresar las horas (mín. 0.01).</div>
+              <div class="invalid-feedback text-danger" v-if="tieneCorreccionEn('horas')">El supervisor solicitó corregir esta sección.</div>
             </div>
           </div>
 
-          <div class="mb-4">
-            <label class="form-label fw-bold">1. Objetivos del Período</label>
-            <p class="small text-muted mb-2">Describe brevemente cuáles eran las metas principales trazadas para este periodo de trabajo.</p>
-            <textarea class="form-control" rows="3" v-model="nuevoInforme.objetivos" placeholder="Ej: Finalizar el diseño de la base de datos y construir las API REST..." required></textarea>
+          <div class="row">
+            <div class="col-md-6 mb-4">
+              <label class="form-label fw-bold" :class="{ 'text-danger': tieneCorreccionEn('periodo') }">
+                Desde (Fecha de Inicio)
+                <span v-if="tieneCorreccionEn('periodo')" class="text-danger small fw-semibold ms-1">(Requiere Corrección)</span>
+              </label>
+              <input type="date" class="form-control form-control-lg" :class="{ 'is-invalid border-danger': tieneCorreccionEn('periodo') }" v-model="nuevoInforme.fecha_inicio" required>
+              <div v-if="tieneCorreccionEn('periodo')" class="invalid-feedback text-danger">El supervisor solicitó corregir las fechas del período.</div>
+            </div>
+            <div class="col-md-6 mb-4">
+              <label class="form-label fw-bold" :class="{ 'text-danger': tieneCorreccionEn('periodo') }">
+                Hasta (Fecha de Fin)
+                <span v-if="tieneCorreccionEn('periodo')" class="text-danger small fw-semibold ms-1">(Requiere Corrección)</span>
+              </label>
+              <input type="date" class="form-control form-control-lg" :class="{ 'is-invalid border-danger': tieneCorreccionEn('periodo') }" v-model="nuevoInforme.fecha_fin" :min="nuevoInforme.fecha_inicio" required>
+              <div v-if="tieneCorreccionEn('periodo')" class="invalid-feedback text-danger">El supervisor solicitó corregir las fechas del período.</div>
+            </div>
           </div>
 
-          <div class="mb-4">
-            <label class="form-label fw-bold">2. Actividades Realizadas</label>
-            <p class="small text-muted mb-2">Detalla las tareas ejecutadas. Se recomienda usar guiones o viñetas para mejor lectura.</p>
-            <textarea class="form-control" rows="6" v-model="nuevoInforme.actividades" placeholder="- Configuración del servidor Ubuntu.&#10;- Diseño de UI en Figma.&#10;- Programación de controladores en Laravel..." required></textarea>
+          <div class="mb-4 p-3 rounded" :class="{ 'border border-danger bg-danger-light-subtle': tieneCorreccionEn('bitacora') }">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <label class="form-label fw-bold m-0" :class="{ 'text-danger': tieneCorreccionEn('bitacora') }">
+                <i class="bi bi-list-task me-2" :class="tieneCorreccionEn('bitacora') ? 'text-danger' : 'text-primary'"></i>
+                Bitácora de Actividades (Detallada por Día)
+                <span v-if="tieneCorreccionEn('bitacora')" class="badge bg-danger ms-2">Requiere Corrección</span>
+              </label>
+              <button type="button" class="btn btn-sm btn-outline-primary" @click="agregarFilaBitacora">
+                <i class="bi bi-plus-circle me-1"></i> Agregar Actividad / Día
+              </button>
+            </div>
+            <div v-if="tieneCorreccionEn('bitacora')" class="text-danger small fw-semibold mb-2">
+              <i class="bi bi-exclamation-circle-fill"></i> El supervisor solicitó revisar las actividades, objetivos o fechas registradas en la bitácora.
+            </div>
+            
+            <div v-if="!nuevoInforme.bitacora || nuevoInforme.bitacora.length === 0" class="alert alert-info py-3 text-center">
+              <i class="bi bi-info-circle fs-4 d-block mb-2"></i>
+              No has agregado ninguna actividad a la bitácora. Haz clic en "Agregar Actividad / Día" para registrar tus actividades cronológicamente.
+            </div>
+            
+            <div v-else class="table-responsive">
+              <table class="table table-bordered align-middle bitacora-edit-table">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 18%;">Fecha</th>
+                    <th style="width: 25%;">Objetivo</th>
+                    <th style="width: 30%;">Actividades Realizadas</th>
+                    <th style="width: 22%;">Logros y Conclusiones</th>
+                    <th style="width: 5%;" class="text-center">Eliminar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(fila, index) in nuevoInforme.bitacora" :key="index">
+                    <td>
+                      <input type="date" class="form-control form-control-sm" v-model="fila.fecha" required>
+                    </td>
+                    <td>
+                      <textarea class="form-control form-control-sm" rows="2" v-model="fila.objetivo" placeholder="Objetivo de la actividad..." required></textarea>
+                    </td>
+                    <td>
+                      <textarea class="form-control form-control-sm" rows="2" v-model="fila.actividades" placeholder="Actividades realizadas..." required></textarea>
+                    </td>
+                    <td>
+                      <textarea class="form-control form-control-sm" rows="2" v-model="fila.logros" placeholder="Logros y conclusiones..." required></textarea>
+                    </td>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-sm btn-outline-danger" @click="eliminarFilaBitacora(index)" title="Eliminar fila">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div class="mb-4">
-            <label class="form-label fw-bold">3. Logros y Conclusiones</label>
-            <p class="small text-muted mb-2">Menciona qué habilidades adquiriste y cuáles fueron los resultados finales de las actividades.</p>
-            <textarea class="form-control" rows="4" v-model="nuevoInforme.conclusiones" placeholder="Se logró optimizar el tiempo de carga en un 20%. Aprendí a utilizar Docker en entornos de producción..." required></textarea>
+          <!-- Apartado para subir imágenes (Máximo 4) -->
+          <div class="mb-4 border rounded p-3" :class="tieneCorreccionEn('imagenes') ? 'bg-danger-subtle border-danger text-danger-emphasis' : 'bg-light'">
+            <label class="form-label fw-bold d-flex align-items-center justify-content-between" :class="{ 'text-danger': tieneCorreccionEn('imagenes') }">
+              <span>
+                <i class="bi bi-images me-2" :class="tieneCorreccionEn('imagenes') ? 'text-danger' : 'text-primary'"></i>
+                Imágenes de Evidencia / Anexos (Máximo 4)
+                <span v-if="tieneCorreccionEn('imagenes')" class="badge bg-danger ms-2">Requiere Corrección</span>
+              </span>
+              <span class="small text-muted">{{ totalImagenesCount }}/4 seleccionadas</span>
+            </label>
+            <div v-if="tieneCorreccionEn('imagenes')" class="text-danger small fw-semibold mb-2">
+              <i class="bi bi-exclamation-circle-fill"></i> El supervisor solicitó corregir, agregar o cambiar las imágenes de evidencia.
+            </div>
+            <p class="small mb-3" :class="tieneCorreccionEn('imagenes') ? 'text-danger-emphasis' : 'text-muted'">Sube capturas de pantalla o fotografías que respalden las actividades realizadas durante este periodo.</p>
+            
+            <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
+              <input 
+                type="file" 
+                ref="fileInputImagenes" 
+                class="d-none" 
+                multiple 
+                accept="image/*" 
+                @change="seleccionarImagenes" 
+                :disabled="totalImagenesCount >= 4"
+              >
+              <button 
+                type="button" 
+                class="btn btn-outline-primary d-flex align-items-center"
+                @click="$refs.fileInputImagenes.click()"
+                :disabled="totalImagenesCount >= 4"
+              >
+                <i class="bi bi-cloud-upload me-2"></i> Seleccionar Imágenes
+              </button>
+              <span class="small text-muted" v-if="totalImagenesCount >= 4">Límite de 4 imágenes alcanzado.</span>
+            </div>
+
+            <!-- Previsualizaciones -->
+            <div class="row row-cols-2 row-cols-md-4 g-3" v-if="totalImagenesCount > 0">
+              <!-- Existentes -->
+              <div class="col" v-for="(imgUrl, index) in imagenesExistentes" :key="'existente-' + index">
+                <div class="position-relative border rounded p-1 bg-white img-preview-box">
+                  <img :src="imgUrl" class="img-thumbnail border-0 w-100 img-preview" alt="Evidencia existente">
+                  <button 
+                    type="button" 
+                    class="btn btn-danger btn-xs btn-delete-preview"
+                    @click="eliminarImagenExistente(index)"
+                    title="Eliminar imagen"
+                  >
+                    <i class="bi bi-trash-fill"></i>
+                  </button>
+                  <span class="badge bg-secondary position-absolute bottom-0 start-0 m-1">Guardada</span>
+                </div>
+              </div>
+
+              <!-- Nuevas -->
+              <div class="col" v-for="(preview, index) in imagenesNuevasPreviews" :key="'nueva-' + index">
+                <div class="position-relative border rounded p-1 bg-white img-preview-box">
+                  <img :src="preview" class="img-thumbnail border-0 w-100 img-preview" alt="Nueva evidencia">
+                  <button 
+                    type="button" 
+                    class="btn btn-danger btn-xs btn-delete-preview"
+                    @click="eliminarImagenNueva(index)"
+                    title="Eliminar imagen"
+                  >
+                    <i class="bi bi-trash-fill"></i>
+                  </button>
+                  <span class="badge bg-primary position-absolute bottom-0 start-0 m-1">Nueva</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="border-top pt-4 mt-2 d-flex justify-content-end">
+
+          <div class="border-top pt-4 mt-2 d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-cancelar px-5 py-2 fs-5 d-flex align-items-center" @click="cerrarFormulario">Cancelar</button>
             <button type="submit" class="btn btn-accent px-5 py-2 fs-5 d-flex align-items-center" :disabled="guardando">
               <span v-if="guardando" class="spinner-border spinner-border-sm me-2"></span>
               <i v-else class="bi bi-save2 me-2"></i>
@@ -172,25 +332,81 @@
               <span class="fw-bold text-dark mt-1 d-block fs-5">{{ informeDetalle?.horas }} horas</span>
             </div>
           </div>
+
+          <div class="mb-3" v-if="informeDetalle?.fecha_inicio && informeDetalle?.fecha_fin">
+            <span class="small text-muted d-block fw-bold mb-1"><i class="bi bi-calendar-range me-1"></i> Período del Informe:</span>
+            <div class="detalle-texto-caja">
+              Desde el <strong>{{ formatearFechaSencilla(informeDetalle.fecha_inicio) }}</strong> hasta el <strong>{{ formatearFechaSencilla(informeDetalle.fecha_fin) }}</strong>
+            </div>
+          </div>
           
-          <div class="mb-3">
-            <span class="small text-muted d-block fw-bold mb-1">1. Objetivos del Período:</span>
-            <div class="detalle-texto-caja">{{ informeDetalle?.objetivos || 'No registrados' }}</div>
+          <div v-if="informeDetalle?.bitacora && informeDetalle.bitacora.length > 0" class="mb-4">
+            <span class="small text-muted d-block fw-bold mb-2"><i class="bi bi-list-columns-reverse me-1"></i> Bitácora de Actividades:</span>
+            <div class="table-responsive">
+              <table class="table table-bordered table-sm custom-detail-table">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 15%;">Fecha</th>
+                    <th style="width: 25%;">Objetivo</th>
+                    <th style="width: 35%;">Actividades</th>
+                    <th style="width: 25%;">Logros y conclusiones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(fila, idx) in informeDetalle.bitacora" :key="idx">
+                    <td class="text-nowrap">{{ formatearFechaSencilla(fila.fecha) }}</td>
+                    <td>{{ fila.objetivo }}</td>
+                    <td class="pre-wrap">{{ fila.actividades }}</td>
+                    <td>{{ fila.logros }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div v-else>
+            <div class="mb-3">
+              <span class="small text-muted d-block fw-bold mb-1">1. Objetivos del Período:</span>
+              <div class="detalle-texto-caja">{{ informeDetalle?.objetivos || 'No registrados' }}</div>
+            </div>
+
+            <div class="mb-3">
+              <span class="small text-muted d-block fw-bold mb-1">2. Actividades Realizadas:</span>
+              <div class="detalle-texto-caja pre-wrap">{{ informeDetalle?.actividades || 'No registradas' }}</div>
+            </div>
+
+            <div class="mb-3">
+              <span class="small text-muted d-block fw-bold mb-1">3. Logros y Conclusiones:</span>
+              <div class="detalle-texto-caja">{{ informeDetalle?.conclusiones || 'No registradas' }}</div>
+            </div>
           </div>
 
-          <div class="mb-3">
-            <span class="small text-muted d-block fw-bold mb-1">2. Actividades Realizadas:</span>
-            <div class="detalle-texto-caja pre-wrap">{{ informeDetalle?.actividades || 'No registradas' }}</div>
-          </div>
-
-          <div class="mb-3">
-            <span class="small text-muted d-block fw-bold mb-1">3. Logros y Conclusiones:</span>
-            <div class="detalle-texto-caja">{{ informeDetalle?.conclusiones || 'No registradas' }}</div>
+          <!-- Galería de imágenes de evidencia -->
+          <div class="mb-4" v-if="informeDetalle?.imagenes && informeDetalle.imagenes.length > 0">
+            <span class="small text-muted d-block fw-bold mb-2"><i class="bi bi-images me-1"></i> Imágenes de Evidencia / Anexos:</span>
+            <div class="row row-cols-2 row-cols-md-4 g-2">
+              <div class="col" v-for="(imgUrl, idx) in informeDetalle.imagenes" :key="idx">
+                <a :href="imgUrl" target="_blank" title="Ver imagen ampliada">
+                  <div class="border rounded p-1 bg-white img-preview-box" style="height: 100px;">
+                    <img :src="imgUrl" class="img-preview" alt="Evidencia">
+                  </div>
+                </a>
+              </div>
+            </div>
           </div>
 
           <div class="mb-3" v-if="informeDetalle?.observaciones">
             <span class="small text-danger d-block fw-bold mb-1">Observaciones del Supervisor:</span>
-            <div class="detalle-texto-caja border-danger-subtle bg-danger-subtle text-danger">{{ informeDetalle?.observaciones }}</div>
+            <div class="detalle-texto-caja border-danger-subtle bg-danger-subtle text-danger">
+              <p class="mb-0 fw-semibold">{{ obtenerDetalleObservacion(informeDetalle.observaciones) }}</p>
+              <div v-if="obtenerSeccionesObservacion(informeDetalle.observaciones).length > 0" class="mt-2">
+                <span class="small d-block text-danger-emphasis mb-1 fw-bold">Secciones indicadas para corrección:</span>
+                <div class="d-flex gap-2 flex-wrap">
+                  <span v-for="sec in obtenerSeccionesObservacion(informeDetalle.observaciones)" :key="sec" class="badge bg-danger text-white">
+                    {{ traduccirSeccion(sec) }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-detalle-footer d-flex justify-content-between align-items-center">
@@ -239,10 +455,82 @@ const nuevoInforme = ref({
   nombre: '',
   tipo: 'parcial',
   horas: null,
-  objetivos: '',
-  actividades: '',
-  conclusiones: ''
+  fecha_inicio: '',
+  fecha_fin: '',
+  bitacora: []
 });
+
+// Reactividad para imágenes
+const fileInputImagenes = ref(null);
+const imagenesExistentes = ref([]);
+const imagenesNuevas = ref([]);
+const imagenesNuevasPreviews = ref([]);
+
+const totalImagenesCount = computed(() => {
+  return (imagenesExistentes.value?.length || 0) + (imagenesNuevas.value?.length || 0);
+});
+
+const seleccionarImagenes = (event) => {
+  const files = Array.from(event.target.files);
+  const slotsDisponibles = 4 - totalImagenesCount.value;
+
+  if (slotsDisponibles <= 0) {
+    alertify.error('Límite de 4 imágenes alcanzado.');
+    return;
+  }
+
+  const filesParaSubir = files.slice(0, slotsDisponibles);
+  if (files.length > slotsDisponibles) {
+    alertify.warning(`Solo se pueden agregar ${slotsDisponibles} imágenes más.`);
+  }
+
+  filesParaSubir.forEach((file) => {
+    if (!file.type.startsWith('image/')) {
+      alertify.error('El archivo debe ser una imagen.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alertify.error('La imagen no debe superar los 2MB.');
+      return;
+    }
+
+    imagenesNuevas.value.push(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      imagenesNuevasPreviews.value.push(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  if (fileInputImagenes.value) {
+    fileInputImagenes.value.value = '';
+  }
+};
+
+const eliminarImagenNueva = (index) => {
+  imagenesNuevas.value.splice(index, 1);
+  imagenesNuevasPreviews.value.splice(index, 1);
+};
+
+const eliminarImagenExistente = (index) => {
+  imagenesExistentes.value.splice(index, 1);
+};
+
+const agregarFilaBitacora = () => {
+  if (!nuevoInforme.value.bitacora) {
+    nuevoInforme.value.bitacora = [];
+  }
+  nuevoInforme.value.bitacora.push({
+    fecha: '',
+    objetivo: '',
+    actividades: '',
+    logros: ''
+  });
+};
+
+const eliminarFilaBitacora = (index) => {
+  nuevoInforme.value.bitacora.splice(index, 1);
+};
 
 // Computed que filtra la tabla dinámicamente
 const informesFiltrados = computed(() => {
@@ -258,19 +546,50 @@ const informesFiltrados = computed(() => {
   });
 });
 
-const cerrarFormulario = () => {
+const resetearFormulario = () => {
   vistaCreacion.value = false;
   editandoId.value = null;
   horasError.value = false;
-  nuevoInforme.value = { nombre: '', tipo: 'parcial', horas: null, objetivos: '', actividades: '', conclusiones: '' };
+  imagenesExistentes.value = [];
+  imagenesNuevas.value = [];
+  imagenesNuevasPreviews.value = [];
+  nuevoInforme.value = {
+    nombre: '',
+    tipo: 'parcial',
+    horas: null,
+    fecha_inicio: '',
+    fecha_fin: '',
+    bitacora: []
+  };
+};
+
+const cerrarFormulario = () => {
+  const tieneCambios = nuevoInforme.value.nombre || 
+                       nuevoInforme.value.horas || 
+                       nuevoInforme.value.fecha_inicio || 
+                       nuevoInforme.value.fecha_fin || 
+                       (nuevoInforme.value.bitacora && nuevoInforme.value.bitacora.length > 0);
+  if (tieneCambios) {
+    alertify.confirm('Advertencia', '¿Estás seguro de cerrar el formulario? Se perderán todos los datos no guardados.', () => {
+      resetearFormulario();
+    }, () => {});
+  } else {
+    resetearFormulario();
+  }
 };
 
 const editarInforme = (inf) => {
   editandoId.value = inf.id;
+  imagenesExistentes.value = Array.isArray(inf.imagenes) ? [...inf.imagenes] : [];
+  imagenesNuevas.value = [];
+  imagenesNuevasPreviews.value = [];
   nuevoInforme.value = {
     nombre: inf.nombre || '',
     tipo: inf.tipo,
     horas: inf.horas,
+    fecha_inicio: inf.fecha_inicio ? inf.fecha_inicio.substring(0, 10) : '',
+    fecha_fin: inf.fecha_fin ? inf.fecha_fin.substring(0, 10) : '',
+    bitacora: Array.isArray(inf.bitacora) ? JSON.parse(JSON.stringify(inf.bitacora)) : [],
     objetivos: inf.objetivos || '',
     actividades: inf.actividades || '',
     conclusiones: inf.conclusiones || ''
@@ -299,26 +618,84 @@ const guardarInforme = async () => {
     return;
   }
 
+  // Validación de fechas
+  const inicio = nuevoInforme.value.fecha_inicio;
+  const fin = nuevoInforme.value.fecha_fin;
+  if (!inicio || !fin) {
+    alertify.error('Debes seleccionar las fechas de inicio y fin del período del informe.');
+    return;
+  }
+  if (new Date(fin) < new Date(inicio)) {
+    alertify.error('La fecha de fin (Hasta) no puede ser anterior a la fecha de inicio (Desde).');
+    return;
+  }
+
+  // Validación de la bitácora
+  if (!nuevoInforme.value.bitacora || nuevoInforme.value.bitacora.length === 0) {
+    alertify.error('Debes agregar al menos una actividad en la bitácora.');
+    return;
+  }
+
+  // Validar campos de cada fila
+  for (let i = 0; i < nuevoInforme.value.bitacora.length; i++) {
+    const fila = nuevoInforme.value.bitacora[i];
+    if (!fila.fecha || !fila.objetivo?.trim() || !fila.actividades?.trim() || !fila.logros?.trim()) {
+      alertify.error(`Por favor completa todos los campos de la fila ${i + 1} de la bitácora.`);
+      return;
+    }
+  }
+
   guardando.value = true;
   try {
-    const data = {
-      tipo: nuevoInforme.value.tipo,
-      horas: horas,
-      nombre: nuevoInforme.value.nombre,
-      objetivos: nuevoInforme.value.objetivos,
-      actividades: nuevoInforme.value.actividades,
-      conclusiones: nuevoInforme.value.conclusiones
-    };
+    const formData = new FormData();
+    formData.append('tipo', nuevoInforme.value.tipo);
+    formData.append('horas', horas);
+    if (nuevoInforme.value.nombre) {
+      formData.append('nombre', nuevoInforme.value.nombre);
+    }
+    formData.append('fecha_inicio', inicio);
+    formData.append('fecha_fin', fin);
+    formData.append('bitacora', JSON.stringify(nuevoInforme.value.bitacora));
+
+    if (nuevoInforme.value.objetivos) {
+      formData.append('objetivos', nuevoInforme.value.objetivos);
+    }
+    if (nuevoInforme.value.actividades) {
+      formData.append('actividades', nuevoInforme.value.actividades);
+    }
+    if (nuevoInforme.value.conclusiones) {
+      formData.append('conclusiones', nuevoInforme.value.conclusiones);
+    }
+
+    // Imágenes existentes
+    formData.append('imagenes_existentes', JSON.stringify(imagenesExistentes.value));
+
+    // Nuevas imágenes
+    imagenesNuevas.value.forEach((file) => {
+      formData.append('imagenes[]', file);
+    });
     
     if (editandoId.value) {
-      await axios.put(`/api/pasante/informes/${editandoId.value}`, data, { headers: { 'X-User-Id': props.usuario.id } });
+      // Método Spoofing para enviar multipart/form-data en PUT en Laravel
+      formData.append('_method', 'PUT');
+      await axios.post(`/api/pasante/informes/${editandoId.value}`, formData, {
+        headers: { 
+          'X-User-Id': props.usuario.id,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       alertify.success('Informe actualizado correctamente.');
     } else {
-      await axios.post('/api/pasante/informes', data, { headers: { 'X-User-Id': props.usuario.id } });
+      await axios.post('/api/pasante/informes', formData, {
+        headers: { 
+          'X-User-Id': props.usuario.id,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       alertify.success('Informe subido y en revisión.');
     }
     
-    cerrarFormulario();
+    resetearFormulario();
     emit('informeEnviado');
   } catch (err) {
     console.error('Error al guardar informe:', err);
@@ -337,6 +714,15 @@ const formatearFecha = (fecha) => {
   });
 };
 
+const formatearFechaSencilla = (fechaStr) => {
+  if (!fechaStr) return '';
+  const partes = fechaStr.split('-');
+  if (partes.length === 3) {
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  }
+  return fechaStr;
+};
+
 const getEstadoBadgeClass = (estado) => {
   if (estado === 'aprobado') return 'bg-success';
   if (estado === 'rechazado' || estado === 'correccion') return 'bg-danger';
@@ -353,6 +739,57 @@ const getEstadoTexto = (estado) => {
   if (estado === 'aprobado') return 'Aprobado';
   if (estado === 'rechazado' || estado === 'correccion') return 'Corrección requerida';
   return 'En revisión';
+};
+
+const obtenerDetalleObservacion = (obs) => {
+  if (!obs) return '';
+  if (obs.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(obs);
+      return parsed.detalle || obs;
+    } catch (e) {
+      return obs;
+    }
+  }
+  return obs;
+};
+
+const obtenerSeccionesObservacion = (obs) => {
+  if (!obs) return [];
+  if (obs.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(obs);
+      return parsed.secciones || [];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+};
+
+const tieneCorreccionEn = (seccion) => {
+  if (!editandoId.value || !nuevoInforme.value.observaciones) return false;
+  const obs = nuevoInforme.value.observaciones;
+  if (obs.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(obs);
+      return (parsed.secciones || []).includes(seccion);
+    } catch (e) {
+      return false;
+    }
+  }
+  return false;
+};
+
+const traduccirSeccion = (seccion) => {
+  const nombres = {
+    nombre: 'Nombre del Informe',
+    horas: 'Horas a Reportar',
+    periodo: 'Período (Fechas)',
+    bitacora: 'Bitácora de Actividades',
+    imagenes: 'Imágenes de Evidencia'
+  };
+  return nombres[seccion] ?? seccion;
 };
 </script>
 
@@ -387,17 +824,18 @@ const getEstadoTexto = (estado) => {
 
 /* Botones Principales */
 .btn-accent {
-  background-color: var(--accent, #67000F);
+  background-color: #001374;
   color: white;
   font-weight: 600;
   border: none;
   transition: all 0.2s;
+  border-radius: 8px;
 }
 .btn-accent:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--accent, #67000F) 85%, black);
+  background-color: #010c67;
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(103, 0, 15, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 19, 116, 0.2);
 }
 
 /* Barra de Búsqueda */
@@ -433,8 +871,8 @@ const getEstadoTexto = (estado) => {
 
 /* Formulario de Creación */
 .form-control:focus, .form-select:focus {
-  border-color: var(--accent, #67000F);
-  box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--accent, #67000F) 25%, transparent);
+  border-color: #001374;
+  box-shadow: 0 0 0 0.25rem rgba(0, 19, 116, 0.15);
 }
 textarea {
   resize: vertical;
@@ -511,5 +949,70 @@ textarea {
   padding: 16px 24px;
   background: #f8fafc;
   border-top: 1px solid #e2e8f0;
+}
+
+/* Botón Cancelar personalizado */
+.btn-cancelar {
+  background-color: #ffffff;
+  color: #67000F;
+  border: 2px solid #67000F;
+  font-weight: 600;
+  transition: all 0.2s;
+  border-radius: 8px;
+}
+.btn-cancelar:hover {
+  background-color: #67000F;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(103, 0, 15, 0.2);
+}
+
+.pre-wrap {
+  white-space: pre-wrap;
+}
+
+.bitacora-edit-table textarea {
+  resize: vertical;
+}
+
+.custom-detail-table {
+  font-size: 0.875rem;
+}
+
+.custom-detail-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+}
+
+/* Previsualización de Imágenes */
+.img-preview-box {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.img-preview {
+  object-fit: cover;
+  height: 100%;
+  width: 100%;
+}
+.btn-delete-preview {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.btn-delete-preview:hover {
+  opacity: 1;
+}
+.btn-xs {
+  padding: 1px 5px;
+  font-size: 0.75rem;
 }
 </style>

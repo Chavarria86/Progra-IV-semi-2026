@@ -10,6 +10,7 @@ use App\Models\Vacante;
 use App\Models\Postulacion;
 use App\Models\CurriculumVitae;
 use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PasanteController extends Controller
 {
@@ -100,41 +101,34 @@ class PasanteController extends Controller
             'horas' => 'required|numeric|min:0.01',
             'archivo' => 'nullable|file|mimes:pdf|max:10240',
             'nombre' => 'nullable|string|max:255',
+            'fecha_inicio' => 'required|date',
+            'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
+            'bitacora' => 'nullable',
             'objetivos' => 'nullable|string',
             'actividades' => 'nullable|string',
-            'conclusiones' => 'nullable|string'
+            'conclusiones' => 'nullable|string',
+            'imagenes' => 'nullable|array|max:4',
+            'imagenes.*' => 'file|max:5120'
         ]);
-
-        $usuario_id = $request->header('X-User-Id', 4); // Pasante
 
         $pasante = Pasante::where('usuario_id', $usuario_id)->first();
         if (!$pasante) return response()->json(['mensaje' => 'Pasante no encontrado.'], 404);
 
-        $urlDocumento = null;
-        if ($request->hasFile('archivo')) {
-            $path = $request->file('archivo')->store('informes', 'public');
-            $urlDocumento = '/storage/' . $path;
-        } else {
-            // Si el frontend envía texto en lugar de un archivo PDF
-            $nombreArchivo = 'informe_generado_' . time() . '.pdf';
-            $ruta = "informes/{$nombreArchivo}";
-            
-            $nombreVal = $request->nombre ?: 'Informe de Pasantias';
-            $horasVal = $request->horas;
-            $tipoVal = $request->tipo === 'final' ? 'Informe Final' : 'Informe Mensual';
-            $objVal = substr(str_replace(["\r", "\n", "(", ")"], " ", $request->objetivos ?? ''), 0, 80);
-            $actVal = substr(str_replace(["\r", "\n", "(", ")"], " ", $request->actividades ?? ''), 0, 80);
-            $conVal = substr(str_replace(["\r", "\n", "(", ")"], " ", $request->conclusiones ?? ''), 0, 80);
+        $bitacora = $request->bitacora;
+        if (is_string($bitacora)) {
+            $bitacora = json_decode($bitacora, true);
+        }
+        if (!is_array($bitacora)) {
+            $bitacora = [];
+        }
 
-            $pdfContent = "%PDF-1.4\n" .
-                "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" .
-                "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n" .
-                "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> /Contents 4 0 R >>\nendobj\n" .
-                "4 0 obj\n<< /Length 300 >>\nstream\nBT\n/F1 14 Tf\n50 750 Td\n({$nombreVal}) Tj\n0 -25 Td\n/F1 12 Tf\n(Tipo de Informe: {$tipoVal}) Tj\n0 -20 Td\n(Horas Reportadas: {$horasVal} horas) Tj\n0 -30 Td\n(1. Objetivos del Periodo:) Tj\n0 -15 Td\n({$objVal}) Tj\n0 -30 Td\n(2. Actividades Realizadas:) Tj\n0 -15 Td\n({$actVal}) Tj\n0 -30 Td\n(3. Conclusiones y Logros:) Tj\n0 -15 Td\n({$conVal}) Tj\nET\nendstream\nendobj\n" .
-                "xref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000056 00000 n \n0000000111 00000 n \n0000000213 00000 n \ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n490\n%%EOF";
-                
-            Storage::disk('public')->put($ruta, $pdfContent);
-            $urlDocumento = "/storage/{$ruta}";
+        $urlsImagenes = [];
+        if ($request->hasFile('imagenes')) {
+            $files = $request->file('imagenes');
+            foreach ($files as $file) {
+                $path = $file->store('informes/images', 'public');
+                $urlsImagenes[] = '/storage/' . $path;
+            }
         }
 
         $informe = Informe::create([
@@ -142,12 +136,26 @@ class PasanteController extends Controller
             'nombre' => $request->nombre,
             'tipo' => $request->tipo,
             'horas' => $request->horas,
-            'archivo_url' => $urlDocumento,
+            'archivo_url' => '', // se actualizará a continuación
             'estado' => 'en_espera',
             'objetivos' => $request->objetivos,
             'actividades' => $request->actividades,
-            'conclusiones' => $request->conclusiones
+            'conclusiones' => $request->conclusiones,
+            'fecha_inicio' => $request->fecha_inicio,
+            'fecha_fin' => $request->fecha_fin,
+            'bitacora' => $bitacora,
+            'imagenes' => $urlsImagenes
         ]);
+
+        $urlDocumento = null;
+        if ($request->hasFile('archivo')) {
+            $path = $request->file('archivo')->store('informes', 'public');
+            $urlDocumento = '/storage/' . $path;
+        } else {
+            $urlDocumento = "/api/informes/{$informe->id}/pdf";
+        }
+
+        $informe->update(['archivo_url' => $urlDocumento]);
 
         return response()->json(['mensaje' => 'Informe subido correctamente. En espera de revisión.', 'informe' => $informe]);
     }
@@ -160,9 +168,15 @@ class PasanteController extends Controller
             'horas' => 'required|numeric|min:0.01',
             'archivo' => 'nullable|file|mimes:pdf|max:10240',
             'nombre' => 'nullable|string|max:255',
+            'fecha_inicio' => 'required|date',
+            'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
+            'bitacora' => 'nullable',
             'objetivos' => 'nullable|string',
             'actividades' => 'nullable|string',
-            'conclusiones' => 'nullable|string'
+            'conclusiones' => 'nullable|string',
+            'imagenes' => 'nullable|array|max:4',
+            'imagenes.*' => 'file|max:5120',
+            'imagenes_existentes' => 'nullable'
         ]);
 
         $usuario_id = $request->header('X-User-Id', 4);
@@ -180,11 +194,52 @@ class PasanteController extends Controller
             return response()->json(['mensaje' => 'No puedes modificar un informe ya aprobado.'], 403);
         }
 
+        $bitacora = $request->bitacora;
+        if (is_string($bitacora)) {
+            $bitacora = json_decode($bitacora, true);
+        }
+        if (!is_array($bitacora)) {
+            $bitacora = [];
+        }
+
+        $imagenesExistentes = $request->imagenes_existentes;
+        if (is_string($imagenesExistentes)) {
+            $imagenesExistentes = json_decode($imagenesExistentes, true);
+        }
+        if (!is_array($imagenesExistentes)) {
+            $imagenesExistentes = [];
+        }
+
+        // Eliminar del almacenamiento físico las imágenes borradas
+        $previousImages = $informe->imagenes ?? [];
+        foreach ($previousImages as $prevImg) {
+            if (!in_array($prevImg, $imagenesExistentes)) {
+                $pathAnterior = str_replace('/storage/', '', $prevImg);
+                Storage::disk('public')->delete($pathAnterior);
+            }
+        }
+
+        $urlsImagenes = $imagenesExistentes;
+        if ($request->hasFile('imagenes')) {
+            $files = $request->file('imagenes');
+            if (count($urlsImagenes) + count($files) > 4) {
+                return response()->json(['mensaje' => 'No puedes subir más de 4 imágenes en total.'], 422);
+            }
+            foreach ($files as $file) {
+                $path = $file->store('informes/images', 'public');
+                $urlsImagenes[] = '/storage/' . $path;
+            }
+        }
+
         $datosUpdate = [
             'tipo' => $request->tipo,
             'horas' => $request->horas,
             'estado' => 'en_espera', // Si estaba en corrección, vuelve a revisión
             'nombre' => $request->nombre,
+            'fecha_inicio' => $request->fecha_inicio,
+            'fecha_fin' => $request->fecha_fin,
+            'bitacora' => $bitacora,
+            'imagenes' => $urlsImagenes,
             'objetivos' => $request->objetivos,
             'actividades' => $request->actividades,
             'conclusiones' => $request->conclusiones
@@ -193,33 +248,18 @@ class PasanteController extends Controller
         if ($request->hasFile('archivo')) {
             $path = $request->file('archivo')->store('informes', 'public');
             $datosUpdate['archivo_url'] = '/storage/' . $path;
-        } else {
-            // Si el frontend edita pero no proporciona un archivo, actualizamos el PDF generado para reflejar los nuevos datos
-            $nombreArchivo = 'informe_generado_' . time() . '.pdf';
-            $ruta = "informes/{$nombreArchivo}";
-            
-            $nombreVal = $request->nombre ?: 'Informe de Pasantias';
-            $horasVal = $request->horas;
-            $tipoVal = $request->tipo === 'final' ? 'Informe Final' : 'Informe Mensual';
-            $objVal = substr(str_replace(["\r", "\n", "(", ")"], " ", $request->objetivos ?? ''), 0, 80);
-            $actVal = substr(str_replace(["\r", "\n", "(", ")"], " ", $request->actividades ?? ''), 0, 80);
-            $conVal = substr(str_replace(["\r", "\n", "(", ")"], " ", $request->conclusiones ?? ''), 0, 80);
 
-            $pdfContent = "%PDF-1.4\n" .
-                "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" .
-                "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n" .
-                "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> /Contents 4 0 R >>\nendobj\n" .
-                "4 0 obj\n<< /Length 300 >>\nstream\nBT\n/F1 14 Tf\n50 750 Td\n({$nombreVal}) Tj\n0 -25 Td\n/F1 12 Tf\n(Tipo de Informe: {$tipoVal}) Tj\n0 -20 Td\n(Horas Reportadas: {$horasVal} horas) Tj\n0 -30 Td\n(1. Objetivos del Periodo:) Tj\n0 -15 Td\n({$objVal}) Tj\n0 -30 Td\n(2. Actividades Realizadas:) Tj\n0 -15 Td\n({$actVal}) Tj\n0 -30 Td\n(3. Conclusiones y Logros:) Tj\n0 -15 Td\n({$conVal}) Tj\nET\nendstream\nendobj\n" .
-                "xref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000056 00000 n \n0000000111 00000 n \n0000000213 00000 n \ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n490\n%%EOF";
-                
-            // Eliminar anterior si existe y no es el base de seed
-            if ($informe->archivo_url && !str_contains($informe->archivo_url, 'informe.pdf')) {
+            if ($informe->archivo_url && str_contains($informe->archivo_url, 'informe_generado_')) {
                 $pathAnterior = str_replace('/storage/', '', $informe->archivo_url);
                 Storage::disk('public')->delete($pathAnterior);
             }
-            
-            Storage::disk('public')->put($ruta, $pdfContent);
-            $datosUpdate['archivo_url'] = "/storage/{$ruta}";
+        } else {
+            $datosUpdate['archivo_url'] = "/api/informes/{$informe->id}/pdf";
+
+            if ($informe->archivo_url && str_contains($informe->archivo_url, 'informe_generado_')) {
+                $pathAnterior = str_replace('/storage/', '', $informe->archivo_url);
+                Storage::disk('public')->delete($pathAnterior);
+            }
         }
 
         $informe->update($datosUpdate);
@@ -428,5 +468,115 @@ class PasanteController extends Controller
         ]);
 
         return response()->json(['mensaje' => 'Solicitud enviada exitosamente al supervisor.']);
+    }
+
+    // Redimensionar imágenes de evidencia si exceden el límite de tamaño para optimizar DomPDF
+    private function resizeImageIfNeeded($absPath, $maxDimension = 800)
+    {
+        if (!file_exists($absPath)) {
+            return [null, null];
+        }
+
+        $info = @getimagesize($absPath);
+        if (!$info) {
+            return [file_get_contents($absPath), pathinfo($absPath, PATHINFO_EXTENSION)];
+        }
+
+        list($width, $height, $type) = $info;
+        $extension = strtolower(pathinfo($absPath, PATHINFO_EXTENSION));
+
+        $im = null;
+        if ($extension === 'jpg' || $extension === 'jpeg' || $type === IMAGETYPE_JPEG) {
+            $im = @imagecreatefromjpeg($absPath);
+            $extension = 'jpeg';
+        } elseif ($extension === 'png' || $type === IMAGETYPE_PNG) {
+            $im = @imagecreatefrompng($absPath);
+            $extension = 'png';
+        } elseif ($extension === 'webp' || (defined('IMAGETYPE_WEBP') && $type === IMAGETYPE_WEBP)) {
+            if (function_exists('imagecreatefromwebp')) {
+                $im = @imagecreatefromwebp($absPath);
+                $extension = 'webp';
+            }
+        }
+
+        if (!$im) {
+            return [file_get_contents($absPath), $extension];
+        }
+
+        if ($width <= $maxDimension && $height <= $maxDimension && $extension !== 'webp') {
+            imagedestroy($im);
+            return [file_get_contents($absPath), $extension];
+        }
+
+        if ($width > $height) {
+            $newWidth = $maxDimension;
+            $newHeight = (int) round($height * ($maxDimension / $width));
+        } else {
+            $newHeight = $maxDimension;
+            $newWidth = (int) round($width * ($maxDimension / $height));
+        }
+
+        $dst = imagecreatetruecolor($newWidth, $newHeight);
+
+        imagealphablending($dst, false);
+        imagesavealpha($dst, true);
+
+        imagecopyresampled($dst, $im, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+        ob_start();
+        imagepng($dst);
+        $data = ob_get_clean();
+
+        imagedestroy($im);
+        imagedestroy($dst);
+
+        return [$data, 'png'];
+    }
+
+    // Generar y transmitir el PDF en tiempo real (on-the-fly)
+    public function verPdf($id)
+    {
+        $informe = Informe::find($id);
+        if (!$informe) {
+            abort(404, 'Informe no encontrado.');
+        }
+
+        $pasante = Pasante::find($informe->pasante_id);
+        if (!$pasante) {
+            abort(404, 'Pasante no encontrado.');
+        }
+
+        // Cargar Logo UGB en ruta absoluta local y convertir a Base64
+        $logoPath = public_path('images/logo_ugb.png');
+        $logoBase64 = null;
+        if (file_exists($logoPath)) {
+            $logoData = file_get_contents($logoPath);
+            $logoBase64 = 'data:image/' . pathinfo($logoPath, PATHINFO_EXTENSION) . ';base64,' . base64_encode($logoData);
+        }
+
+        // Obtener rutas absolutas locales de las imágenes de evidencia y convertirlas a Base64 (redimensionando si es necesario)
+        $imagenesBase64 = [];
+        if (!empty($informe->imagenes)) {
+            foreach ($informe->imagenes as $imgUrl) {
+                $relativePath = str_replace('/storage/', '', $imgUrl);
+                $absPath = storage_path('app/public/' . $relativePath);
+                if (file_exists($absPath)) {
+                    list($data, $ext) = $this->resizeImageIfNeeded($absPath, 800);
+                    if ($data) {
+                        $imagenesBase64[] = 'data:image/' . $ext . ';base64,' . base64_encode($data);
+                    }
+                }
+            }
+        }
+
+        $pdf = Pdf::loadView('pdf.informe', [
+            'informe' => $informe,
+            'pasante' => $pasante->load('usuario'),
+            'bitacora' => $informe->bitacora ?? [],
+            'logoBase64' => $logoBase64,
+            'imagenesBase64' => $imagenesBase64
+        ]);
+
+        return $pdf->stream('informe_' . $informe->id . '.pdf');
     }
 }

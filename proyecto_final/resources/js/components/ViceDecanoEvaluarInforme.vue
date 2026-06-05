@@ -55,19 +55,51 @@
             </span>
           </div>
 
-          <div class="detalle-seccion" v-if="informeSeleccionado.objetivos">
-            <div class="detalle-seccion-title">Objetivos</div>
-            <div class="detalle-seccion-content">{{ informeSeleccionado.objetivos }}</div>
+          <div class="detalle-seccion" v-if="informeSeleccionado.fecha_inicio && informeSeleccionado.fecha_fin">
+            <div class="detalle-seccion-title">Período del Informe</div>
+            <div class="detalle-seccion-content" style="font-weight: 500;">
+              Desde el <strong>{{ informeSeleccionado.fecha_inicio }}</strong> hasta el <strong>{{ informeSeleccionado.fecha_fin }}</strong>
+            </div>
           </div>
 
-          <div class="detalle-seccion" v-if="informeSeleccionado.actividades">
-            <div class="detalle-seccion-title">Actividades Realizadas</div>
-            <div class="detalle-seccion-content">{{ informeSeleccionado.actividades }}</div>
+          <div class="detalle-seccion" v-if="informeSeleccionado.bitacora && informeSeleccionado.bitacora.length > 0">
+            <div class="detalle-seccion-title">Bitácora de Actividades</div>
+            <div class="table-responsive bg-white rounded p-1 border">
+              <table class="table table-bordered table-sm custom-detail-table mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 15%;">Fecha</th>
+                    <th style="width: 25%;">Objetivo</th>
+                    <th style="width: 35%;">Actividades</th>
+                    <th style="width: 25%;">Logros y conclusiones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(fila, idx) in informeSeleccionado.bitacora" :key="idx">
+                    <td class="text-nowrap">{{ formatearFechaSencilla(fila.fecha) }}</td>
+                    <td>{{ fila.objetivo }}</td>
+                    <td class="pre-wrap">{{ fila.actividades }}</td>
+                    <td>{{ fila.logros }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
+          <div v-else>
+            <div class="detalle-seccion" v-if="informeSeleccionado.objetivos">
+              <div class="detalle-seccion-title">Objetivos</div>
+              <div class="detalle-seccion-content">{{ informeSeleccionado.objetivos }}</div>
+            </div>
 
-          <div class="detalle-seccion" v-if="informeSeleccionado.conclusiones">
-            <div class="detalle-seccion-title">Conclusiones</div>
-            <div class="detalle-seccion-content">{{ informeSeleccionado.conclusiones }}</div>
+            <div class="detalle-seccion" v-if="informeSeleccionado.actividades">
+              <div class="detalle-seccion-title">Actividades Realizadas</div>
+              <div class="detalle-seccion-content">{{ informeSeleccionado.actividades }}</div>
+            </div>
+
+            <div class="detalle-seccion" v-if="informeSeleccionado.conclusiones">
+              <div class="detalle-seccion-title">Conclusiones</div>
+              <div class="detalle-seccion-content">{{ informeSeleccionado.conclusiones }}</div>
+            </div>
           </div>
 
           <div class="detalle-seccion" v-if="informeSeleccionado.archivo_url">
@@ -157,6 +189,15 @@ const submitEvaluacion = () => {
   if (!evaluacion.value.informe_id) return;
   emit('evaluar', { ...evaluacion.value });
   evaluacion.value = { informe_id: '', veredicto: 'aprobado', observaciones: '' };
+};
+
+const formatearFechaSencilla = (fechaStr) => {
+  if (!fechaStr) return '';
+  const partes = fechaStr.split('-');
+  if (partes.length === 3) {
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  }
+  return fechaStr;
 };
 </script>
 
@@ -340,5 +381,36 @@ textarea { resize: vertical; min-height: 100px; }
 }
 .btn-open-pdf-tab:hover {
   opacity: 0.85;
+}
+
+.pre-wrap {
+  white-space: pre-wrap;
+}
+
+.custom-detail-table {
+  font-size: 0.85rem;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.custom-detail-table th, .custom-detail-table td {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+}
+
+.custom-detail-table th {
+  background-color: var(--bg);
+  font-weight: 600;
+  color: var(--sub);
+  text-align: left;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.text-nowrap {
+  white-space: nowrap;
 }
 </style>

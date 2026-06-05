@@ -4,13 +4,19 @@
 
       <!-- ===== HEADER ===== -->
       <div class="wiz-header">
-        <div class="wiz-header-inner" :class="{ 'preview-mode': paso === 5 }">
+        <div class="wiz-header-inner" :class="{ 'has-back-btn': paso > 0, 'preview-mode': paso === 5 }">
+          <!-- Botón volver (flecha izquierda) a la altura de cerrar -->
+          <button v-if="paso > 0" class="btn-volver-header" @click="handleAtras" title="Atrás">
+            <i class="bi bi-arrow-left"></i>
+          </button>
+
           <span v-if="paso === 0">Bienvenido a Génesis Profesional — Completa tu perfil profesional</span>
           <span v-else-if="paso === 1">Paso 1: Configuración del diseño</span>
           <span v-else-if="paso === 2">Paso 2: Información de Perfil</span>
           <span v-else-if="paso === 3">Paso 3: Objetivos y valores</span>
           <span v-else-if="paso === 4">Paso 4: Logros</span>
           <span v-else>Tu perfil ya casi está listo.</span>
+
           <!-- Botón cerrar / volver al dashboard siempre visible -->
           <button class="btn-cerrar-wizard" @click="confirmarSalida" title="Volver al Dashboard">
             <i class="bi bi-x-lg"></i>
@@ -406,6 +412,7 @@ onMounted(() => {
     
     perfil.value.nombre = cv.nombre_completo || '';
     perfil.value.profesion = cv.profesion || '';
+    perfil.value.fotoUrl = cv.foto_url || '';
     perfil.value.direccion = cv.direccion || '';
     perfil.value.email = cv.email || '';
     perfil.value.telefono = cv.telefono || '';
@@ -437,16 +444,12 @@ const cargarFoto = (e) => {
 
 // Confirmación antes de salir
 const confirmarSalida = () => {
-  if (paso.value === 0) {
-    emit('cerrar');
-  } else {
-    alertify.confirm(
-      'Salir del Asistente',
-      '¿Seguro que deseas salir? Perderás los cambios no guardados.',
-      () => emit('cerrar'),
-      () => {}
-    ).set({ labels: { ok: 'Sí, salir', cancel: 'Cancelar' } });
-  }
+  alertify.confirm(
+    'Salir del Asistente',
+    '¿Seguro que deseas salir del asistente de Currículum? Se perderán los cambios no guardados.',
+    () => emit('cerrar'),
+    () => {}
+  ).set({ labels: { ok: 'Sí, salir', cancel: 'Cancelar' } });
 };
 
 const handleAtras = () => {
@@ -605,7 +608,30 @@ const soloGuardar = async () => {
   padding: 16px 28px;
   font-family: 'Lora', serif;
   font-size: 18px;
+  position: relative;
 }
+
+.wiz-header-inner.has-back-btn {
+  padding-left: 76px;
+}
+
+.btn-volver-header {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  border-radius: 6px;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.btn-volver-header:hover { background: rgba(255,255,255,0.3); }
 
 .btn-cerrar-wizard {
   background: rgba(255,255,255,0.15);
