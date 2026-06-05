@@ -1,0 +1,16 @@
+{
+  "name": "genesis-chat-server",
+  "version": "1.0.0",
+  "description": "Real-time websocket server for Genesis Professional Chat",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "mongoose": "^8.8.0",
+    "socket.io": "^4.8.1"
+  }
+}

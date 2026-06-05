@@ -30,7 +30,7 @@
             <div class="input-group">
               <input type="text" class="form-control" v-model="nuevaArea" placeholder="Ej: Inteligencia Artificial / Machine Learning" required>
               <button class="btn btn-accent px-4" type="button" @click="guardarAreaLocal">
-                <i class="bi bi-save2-fill me-1"></i> Guardar en LocalStore
+                <i class="bi bi-save2-fill me-1"></i> Guardar
               </button>
             </div>
           </div>

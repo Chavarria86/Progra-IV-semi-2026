@@ -359,18 +359,20 @@ class SupervisorController extends Controller
             $pasantesIds = Pasante::where('supervisor_id', $supervisor_id)->pluck('id');
         }
 
-        $solicitudes = Postulacion::with(['pasante.usuario', 'vacante'])
+        $solicitudes = Postulacion::with(['pasante.usuario', 'vacante', 'cv'])
             ->whereIn('pasante_id', $pasantesIds)
             ->where('estado', 'pendiente')
             ->get()
             ->map(function ($post) {
                 return (object)[
                     'id' => $post->id,
-                    'pasante' => ($post->pasante->usuario->nombres ?? '') . ' ' . ($post->pasante->usuario->apellidos ?? ''),
-                    'vacante' => $post->vacante->empresa . ' - ' . $post->vacante->area,
+                    'pasante' => ($post->pasante && $post->pasante->usuario) 
+                        ? ($post->pasante->usuario->nombres . ' ' . $post->pasante->usuario->apellidos) 
+                        : 'Estudiante',
+                    'vacante' => $post->vacante ? ($post->vacante->empresa . ' - ' . $post->vacante->area) : 'Vacante',
                     'estado' => $post->estado,
                     'cv_url' => $post->cv ? $post->cv->url_publica : null,
-                    'fecha' => $post->created_at->format('d M Y')
+                    'fecha' => $post->created_at ? \Carbon\Carbon::parse($post->created_at)->format('d M Y') : 'Hace poco'
                 ];
             });
 
@@ -413,16 +415,52 @@ class SupervisorController extends Controller
             return [
                 'id' => $p->id,
                 'pasante_id' => $p->id,
+                'usuario_id' => $p->usuario_id,
                 'nombre' => $p->usuario->nombres ?? '',
                 'apellido' => $p->usuario->apellidos ?? '',
                 'correo' => $p->usuario->correo_institucional ?? '',
                 'area' => $p->area,
                 'estado' => $p->estado,
                 'fase_actual' => $p->fase_actual,
-                'horas_aprobadas' => $p->horas_aprobadas
+                'horas_aprobadas' => $p->horas_aprobadas,
+                'rol' => 'pasante'
             ];
         });
-        return response()->json(['pasantes' => $pasantes]);
+
+        $colegas = [];
+        if ($esVicedecano) {
+            $supervisores = PersonalAdministrativo::all();
+            foreach ($supervisores as $s) {
+                $sUser = Usuario::where('correo_institucional', $s->correo_institucional)->first();
+                if ($sUser) {
+                    $colegas[] = [
+                        'usuario_id' => $sUser->id,
+                        'nombre' => $s->nombres,
+                        'apellido' => $s->apellidos,
+                        'correo' => $s->correo_institucional,
+                        'cargo' => $s->cargo,
+                        'rol' => 'supervisor'
+                    ];
+                }
+            }
+        } else {
+            $vdUser = Usuario::where('rol', 'vice_decano')->first();
+            if ($vdUser) {
+                $colegas[] = [
+                    'usuario_id' => $vdUser->id,
+                    'nombre' => $vdUser->nombres,
+                    'apellido' => $vdUser->apellidos,
+                    'correo' => $vdUser->correo_institucional,
+                    'cargo' => 'Vicedecano',
+                    'rol' => 'vice_decano'
+                ];
+            }
+        }
+
+        return response()->json([
+            'pasantes' => $pasantes,
+            'colegas' => $colegas
+        ]);
     }
 
     // Crear Vacantes (Supervisor)

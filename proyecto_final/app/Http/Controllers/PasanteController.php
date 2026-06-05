@@ -312,11 +312,29 @@ class PasanteController extends Controller
         $usuario_id = $request->header('X-User-Id', 4);
         $pasante = Pasante::with('supervisor')->where('usuario_id', $usuario_id)->first();
         
-        if (!$pasante || !$pasante->supervisor) {
-            return response()->json(['supervisor' => null, 'notificaciones' => []]);
+        $vicedecanoUser = Usuario::where('rol', 'vice_decano')->first();
+        $vicedecanoInfo = null;
+        if ($vicedecanoUser) {
+            $vicedecanoInfo = [
+                'usuario_id' => $vicedecanoUser->id,
+                'nombres' => $vicedecanoUser->nombres,
+                'apellidos' => $vicedecanoUser->apellidos,
+                'correo' => $vicedecanoUser->correo_institucional,
+                'cargo' => 'Vicedecano'
+            ];
         }
 
+        if (!$pasante || !$pasante->supervisor) {
+            return response()->json([
+                'supervisor' => null, 
+                'vicedecano' => $vicedecanoInfo,
+                'notificaciones' => []
+            ]);
+        }
+
+        $supervisorUser = Usuario::where('correo_institucional', $pasante->supervisor->correo_institucional)->first();
         $supervisorInfo = [
+            'usuario_id' => $supervisorUser ? $supervisorUser->id : null,
             'nombres' => $pasante->supervisor->nombres,
             'apellidos' => $pasante->supervisor->apellidos,
             'correo' => $pasante->supervisor->correo_institucional,
@@ -327,15 +345,26 @@ class PasanteController extends Controller
         $notificaciones = [];
         $informesCorreccion = Informe::where('pasante_id', $pasante->id)->where('estado', 'correccion')->get();
         foreach ($informesCorreccion as $inf) {
+            $fecha = 'Reciente';
+            if ($inf->updated_at) {
+                $fecha = ($inf->updated_at instanceof \Carbon\Carbon || $inf->updated_at instanceof \DateTime)
+                    ? $inf->updated_at->format('d M Y')
+                    : date('d M Y', strtotime($inf->updated_at));
+            } elseif ($inf->created_at) {
+                $fecha = ($inf->created_at instanceof \Carbon\Carbon || $inf->created_at instanceof \DateTime)
+                    ? $inf->created_at->format('d M Y')
+                    : date('d M Y', strtotime($inf->created_at));
+            }
             $notificaciones[] = [
                 'tipo' => 'informe',
                 'mensaje' => "El supervisor ha solicitado correcciones en el informe de " . $inf->horas . " horas.",
-                'fecha' => $inf->updated_at->format('d M Y')
+                'fecha' => $fecha
             ];
         }
 
         return response()->json([
             'supervisor' => $supervisorInfo,
+            'vicedecano' => $vicedecanoInfo,
             'notificaciones' => $notificaciones
         ]);
     }

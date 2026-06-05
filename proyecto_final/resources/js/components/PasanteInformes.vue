@@ -69,10 +69,10 @@
                   <button class="btn btn-sm btn-outline-primary me-1" title="Ver Detalles" @click="verDetalles(inf)">
                     <i class="bi bi-eye"></i>
                   </button>
-                  <button v-if="inf.estado === 'en_espera' || inf.estado === 'revision'" class="btn btn-sm btn-outline-warning me-1" title="Editar Informe" @click="editarInforme(inf)">
+                  <button v-if="inf.estado === 'en_espera' || inf.estado === 'revision' || inf.estado === 'correccion'" class="btn btn-sm btn-outline-warning me-1" title="Editar/Corregir Informe" @click="editarInforme(inf)">
                     <i class="bi bi-pencil"></i>
                   </button>
-                  <button v-if="inf.estado === 'en_espera' || inf.estado === 'revision'" class="btn btn-sm btn-outline-danger" title="Eliminar Informe" @click="eliminarInforme(inf.id)">
+                  <button v-if="inf.estado === 'en_espera' || inf.estado === 'revision' || inf.estado === 'correccion'" class="btn btn-sm btn-outline-danger" title="Eliminar Informe" @click="eliminarInforme(inf.id)">
                     <i class="bi bi-trash"></i>
                   </button>
                 </td>

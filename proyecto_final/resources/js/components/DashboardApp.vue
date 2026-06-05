@@ -21,9 +21,17 @@
             :class="{ active: seccionActiva === item.seccion || (item.alias && item.alias.includes(seccionActiva)), 'nav-logout': item.logout }"
             @click="item.logout ? cerrarSesion() : cambiarSeccion(item.seccion)"
           >
-            <a href="#">
-              <i :class="item.icon + ' me-3'"></i>
-              <span>{{ item.label }}</span>
+            <a href="#" class="d-flex align-items-center w-100 justify-content-between">
+              <span class="d-flex align-items-center">
+                <i :class="item.icon + ' me-3'"></i>
+                <span>{{ item.label }}</span>
+              </span>
+              <span 
+                v-if="item.seccion === 'chat_interno' && unreadMessagesCount > 0" 
+                class="chat-notification-badge"
+              >
+                {{ unreadMessagesCount }}
+              </span>
             </a>
           </li>
         </ul>
@@ -52,6 +60,12 @@
           :isDark="darkActive"
           @toggleDarkMode="toggleDarkMode"
         />
+        <ChatInterno
+          v-else-if="seccionActiva === 'chat_interno'"
+          :usuario="usuario"
+          :socket="globalSocket"
+          @activeChatChanged="handleActiveChatChanged"
+        />
         <component 
           v-else
           :is="dashboardComponent" 
@@ -70,6 +84,8 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import AiChatWindow from './AiChatWindow.vue';
 import ConfiguracionApp from './ConfiguracionApp.vue';
+import ChatInterno from './ChatInterno.vue';
+import { io } from 'socket.io-client';
 
 const seccionActiva = ref('dashboard');
 const sidebarOpen = ref(false);
@@ -85,6 +101,31 @@ import SupervisorDashboard from './SupervisorDashboard.vue';
 import ViceDecanoDashboard from './ViceDecanoDashboard.vue';
 
 const usuario = ref({});
+const globalSocket = ref(null);
+const unreadMessagesCount = ref(0);
+const activeChatUserId = ref(null);
+
+const initGlobalSocket = () => {
+  if (globalSocket.value || !usuario.value.id) return;
+  
+  globalSocket.value = io('http://localhost:3000');
+  
+  globalSocket.value.on('connect', () => {
+    globalSocket.value.emit('register_user', usuario.value.id);
+  });
+  
+  globalSocket.value.on('msg_notification', (mensaje) => {
+    if (seccionActiva.value !== 'chat_interno' || activeChatUserId.value !== mensaje.remitente_id) {
+      unreadMessagesCount.value++;
+      const remitenteName = mensaje.remitente_nombre || 'Usuario';
+      alertify.success(`Nuevo mensaje de ${remitenteName}: "${mensaje.texto.substring(0, 30)}${mensaje.texto.length > 30 ? '...' : ''}"`);
+    }
+  });
+};
+
+const handleActiveChatChanged = (id) => {
+  activeChatUserId.value = id;
+};
 
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value;
@@ -97,6 +138,7 @@ onMounted(() => {
     return;
   }
   usuario.value = JSON.parse(userJson);
+  initGlobalSocket();
 });
 
 const dashboardComponent = computed(() => {
@@ -114,10 +156,12 @@ const navItems = computed(() => {
     return [
       { seccion: 'dashboard',        label: 'Dashboard',           icon: 'bi bi-grid-fill' },
       { seccion: 'validar_cv',        label: 'Validar CVs',         icon: 'bi bi-check2-square' },
+      { seccion: 'solicitudes',       label: 'Postulaciones',       icon: 'bi bi-person-plus-fill' },
       { seccion: 'mis_pasantes',      label: 'Mis Pasantes',        icon: 'bi bi-people-fill' },
       { seccion: 'evaluar_informes',  label: 'Evaluar Informes',    icon: 'bi bi-file-earmark-check-fill' },
       { seccion: 'ver_vacantes',      label: 'Sugerir Vacantes',    icon: 'bi bi-building-fill-add' },
       { seccion: 'chat_ia',           label: 'Análisis IA',         icon: 'bi bi-search-heart' },
+      { seccion: 'chat_interno',      label: 'Mensajería',          icon: 'bi bi-chat-dots-fill' },
       { seccion: 'configuracion',     label: 'Configuración',       icon: 'bi bi-gear-fill' },
       { seccion: 'logout',            label: 'Cerrar sesión',       icon: 'bi bi-box-arrow-left', logout: true },
     ];
@@ -129,9 +173,11 @@ const navItems = computed(() => {
       { seccion: 'crear_vacantes',       label: 'Crear Vacantes',        icon: 'bi bi-plus-square-dotted' },
       { seccion: 'asignar_supervisores', label: 'Asignar Supervisores',  icon: 'bi bi-person-lines-fill' },
       { seccion: 'evaluar_informe',      label: 'Evaluar Informes',      icon: 'bi bi-file-earmark-check-fill' },
+      { seccion: 'postulaciones',        label: 'Postulaciones',         icon: 'bi bi-list-check' },
       { seccion: 'vista_supervisores',   label: 'Modo Supervisor',       icon: 'bi bi-person-badge-fill' },
       { seccion: 'estadisticas',         label: 'Estadísticas',          icon: 'bi bi-bar-chart-fill' },
       { seccion: 'chat_ia',              label: 'Análisis IA',           icon: 'bi bi-search-heart' },
+      { seccion: 'chat_interno',         label: 'Mensajería',            icon: 'bi bi-chat-dots-fill' },
       { seccion: 'configuracion',        label: 'Configuración',         icon: 'bi bi-gear-fill' },
       { seccion: 'logout',               label: 'Cerrar sesión',         icon: 'bi bi-box-arrow-left', logout: true },
     ];
@@ -145,6 +191,7 @@ const navItems = computed(() => {
     { seccion: 'vacantes',     label: 'Vacantes',             icon: 'bi bi-building-fill-add' },
     { seccion: 'progreso',     label: 'Historial de progreso',icon: 'bi bi-clock-fill' },
     { seccion: 'chat_ia',      label: 'Análisis IA',          icon: 'bi bi-search-heart' },
+    { seccion: 'chat_interno', label: 'Mensajería',           icon: 'bi bi-chat-dots-fill' },
     { seccion: 'configuracion',label: 'Configuración',        icon: 'bi bi-gear-fill' },
     { seccion: 'logout',       label: 'Cerrar sesión',        icon: 'bi bi-box-arrow-left', logout: true },
   ];
@@ -166,11 +213,13 @@ const formatTitle = (seccion) => {
     evaluar_informes:     'Evaluar Informes y Validar Horas',
     ver_vacantes:         'Sugerir Vacantes a Pasantes',
     evaluar_informe:      'Evaluar Informes Finales',
+    postulaciones:        'Postulaciones de Pasantes',
     estadisticas:         'Estadísticas Generales',
     crear_vacantes:       'Crear Nuevas Vacantes',
     asignar_supervisores: 'Asignación de Supervisores',
     vista_supervisores:   'Modo Supervisor Global',
     chat_ia:              'Análisis IA',
+    chat_interno:         'Mensajería Interna',
   };
   return labels[seccion] ?? 'Dashboard';
 };
@@ -178,6 +227,9 @@ const formatTitle = (seccion) => {
 const cambiarSeccion = (nuevaSeccion) => {
   seccionActiva.value = nuevaSeccion;
   sidebarOpen.value = false;
+  if (nuevaSeccion === 'chat_interno') {
+    unreadMessagesCount.value = 0;
+  }
 };
 
 const cerrarSesion = () => {
@@ -367,5 +419,25 @@ const cerrarSesion = () => {
   .dashboard-content {
     padding: 20px 16px;
   }
+}
+
+.chat-notification-badge {
+  background-color: #dc2626;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  margin-left: auto;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+  animation: pulseBadge 2s infinite;
+}
+
+@keyframes pulseBadge {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
 </style>

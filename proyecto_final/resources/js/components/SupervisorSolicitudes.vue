@@ -1,39 +1,64 @@
 <template>
   <div class="solicitudes-view animate-fade-in">
     <div class="dashboard-section-card">
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 border-bottom pb-3">
-        <h5 class="card-title m-0"><i class="bi bi-person-plus-fill text-primary"></i> Postulaciones a Vacantes</h5>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 border-bottom pb-3 header-border">
+        <h5 class="card-title m-0"><i class="bi bi-person-plus-fill text-primary-custom"></i> Postulaciones a Vacantes</h5>
       </div>
       
       <p class="text-muted small mb-4">Revisa las postulaciones de tus pasantes a diferentes vacantes. Debes aprobarlas para que lleguen al Vicedecano.</p>
 
-      <div v-if="cargandoPostulaciones" class="text-center py-4">
-        <span class="spinner-border text-primary"></span>
+      <div v-if="cargandoPostulaciones" class="text-center py-5">
+        <span class="spinner-border text-primary-custom" style="width: 2.5rem; height: 2.5rem;"></span>
       </div>
-      <div v-else-if="postulacionesPendientes.length === 0" class="text-center py-5 bg-light rounded border text-muted">
-        <i class="bi bi-inbox d-block fs-1 mb-3 text-secondary"></i>
-        <span>No tienes postulaciones pendientes de revisión.</span>
+      
+      <div v-else-if="postulacionesPendientes.length === 0" class="text-center py-5 empty-box rounded border text-muted">
+        <i class="bi bi-inbox d-block fs-1 mb-3 text-secondary-custom"></i>
+        <span class="fw-semibold">No tienes postulaciones pendientes de revisión.</span>
       </div>
+      
       <div v-else class="solicitudes-grid">
         <div v-for="post in postulacionesPendientes" :key="post.id" class="solicitud-card border rounded p-4 mb-3">
-          <div class="d-flex justify-content-between align-items-start mb-3">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div>
-              <h6 class="fw-bold mb-1 text-dark"><i class="bi bi-person-circle me-2"></i>{{ post.pasante }}</h6>
-              <p class="mb-0 text-primary fw-semibold"><i class="bi bi-building me-2"></i>{{ post.vacante }}</p>
+              <h6 class="fw-bold mb-2 text-dark text-main-custom">
+                <i class="bi bi-person-circle me-2 text-primary-custom"></i>{{ post.pasante }}
+              </h6>
+              <p class="mb-0 text-primary-custom fw-semibold font-serif-custom">
+                <i class="bi bi-building me-2"></i>{{ post.vacante }}
+              </p>
             </div>
-            <a v-if="post.cv_url" :href="post.cv_url" target="_blank" class="btn btn-sm btn-outline-primary">Ver CV</a>
+            
+            <a 
+              v-if="post.cv_url" 
+              :href="post.cv_url" 
+              target="_blank" 
+              class="btn btn-sm btn-outline-pdf-custom"
+            >
+              <i class="bi bi-file-earmark-pdf-fill me-1"></i>Ver CV
+            </a>
+            <span v-else class="text-muted small italic">Sin CV Adjunto</span>
           </div>
 
-          <div class="d-flex justify-content-between align-items-center mt-4">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4 pt-3 border-top card-footer-border">
             <small class="text-muted"><i class="bi bi-calendar3 me-1"></i> Postulado: {{ post.fecha }}</small>
+            
             <div v-if="usuario.rol === 'vice_decano'" class="badge bg-info text-dark px-3 py-2 small">
               <i class="bi bi-info-circle-fill me-1"></i> Modo Vista
             </div>
+            
             <div v-else class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-danger" @click="responderPostulacion(post, 'rechazar')" :disabled="procesando === post.id">
+              <button 
+                class="btn btn-sm btn-outline-danger" 
+                @click="responderPostulacion(post, 'rechazar')" 
+                :disabled="procesando === post.id"
+              >
                 <i class="bi bi-x-circle me-1"></i> Rechazar
               </button>
-              <button class="btn btn-sm btn-success" @click="responderPostulacion(post, 'aceptar')" :disabled="procesando === post.id">
+              <button 
+                class="btn btn-sm btn-success-custom" 
+                @click="responderPostulacion(post, 'aceptar')" 
+                :disabled="procesando === post.id"
+              >
                 <span v-if="procesando === post.id" class="spinner-border spinner-border-sm me-1"></span>
                 <i v-else class="bi bi-check-circle me-1"></i> Aprobar para Vicedecano
               </button>
@@ -70,6 +95,9 @@ const cargarPostulaciones = async () => {
     postulacionesPendientes.value = (res.data.postulaciones || []).filter(p => p.estado === 'pendiente');
   } catch (err) {
     console.error('Error al cargar postulaciones:', err);
+    if (window.alertify) {
+      alertify.error('Error al cargar las postulaciones.');
+    }
   } finally {
     cargandoPostulaciones.value = false;
   }
@@ -82,10 +110,20 @@ const responderPostulacion = async (post, decision) => {
       headers: { 'X-User-Id': props.usuario?.id || 2 }
     });
     postulacionesPendientes.value = postulacionesPendientes.value.filter(p => p.id !== post.id);
-    if (decision === 'aceptar') alertify.success('Postulación aprobada y enviada a Vicedecano.');
-    else alertify.warning('Postulación rechazada.');
+    if (decision === 'aceptar') {
+      if (window.alertify) {
+        alertify.success('Postulación aprobada y enviada al Vicedecano.');
+      }
+    } else {
+      if (window.alertify) {
+        alertify.warning('Postulación rechazada.');
+      }
+    }
   } catch (err) {
-    alertify.error('Error al procesar postulación.');
+    console.error('Error al responder postulación:', err);
+    if (window.alertify) {
+      alertify.error('Error al responder la postulación.');
+    }
   } finally {
     procesando.value = null;
   }
@@ -96,6 +134,10 @@ const responderPostulacion = async (post, decision) => {
 .animate-fade-in { animation: fadeIn 0.4s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+.solicitudes-view {
+  font-family: 'Inter', sans-serif;
+}
+
 .dashboard-section-card {
   background: #fff;
   border-radius: 12px;
@@ -103,62 +145,94 @@ const responderPostulacion = async (post, decision) => {
   box-shadow: 0 4px 18px rgba(0,0,0,0.03);
   border: 1px solid #e2e8f0;
 }
-.card-title { font-family: 'Lora', serif; font-size: 20px; font-weight: 600; color: #0f172a; }
-.text-primary { color: #001374 !important; }
-.bg-primary-soft { background-color: #eff6ff; }
-.text-primary { color: #001374 !important; }
 
-/* Tabs */
-.tab-buttons { display: flex; gap: 10px; }
-.tab-btn {
-  background: #f1f5f9; border: none; border-radius: 8px;
-  padding: 10px 20px; font-weight: 600; color: #64748b; transition: all 0.2s; cursor: pointer;
+.card-title {
+  font-family: 'Lora', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
 }
-.tab-btn:hover { background: #e2e8f0; }
-.tab-btn.active { background: #001374; color: white; }
+
+.text-primary-custom {
+  color: #001374 !important;
+}
+.text-secondary-custom {
+  color: #64748b;
+}
 
 /* Solicitud Card */
-.solicitud-card { background: #fafcff; transition: transform 0.2s, box-shadow 0.2s; }
-.solicitud-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-
-.pasante-avatar {
-  width: 48px; height: 48px; border-radius: 50%;
-  background: linear-gradient(135deg, #001374, #1d4ed8);
-  color: white; font-weight: 700; font-size: 16px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+.solicitud-card {
+  background: #fafcff;
+  border-color: #e2e8f0 !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.solicitud-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
 }
 
-.area-chip-sm {
-  display: inline-block; font-size: 11px; font-weight: 700;
-  padding: 3px 10px; border-radius: 20px;
-  background: #f0fdf4; color: #166534; text-transform: capitalize;
+/* PDF Button styling */
+.btn-outline-pdf-custom {
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 5px 12px;
+  background-color: transparent;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-outline-pdf-custom:hover {
+  background-color: #dc3545;
+  color: #FFFFFF !important;
 }
 
-.custom-table th {
-  font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.5px; color: #64748b; padding: 14px 16px;
+.btn-success-custom {
+  background-color: #198754;
+  color: #FFFFFF;
+  border: none;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 6px 14px;
+  transition: opacity 0.2s, transform 0.1s;
 }
-.custom-table td { padding: 14px 16px; }
+.btn-success-custom:hover {
+  opacity: 0.9;
+}
+.btn-success-custom:active {
+  transform: scale(0.97);
+}
 
-@media (max-width: 768px) {
-  .nav-tabs {
-    flex-direction: column;
-    width: 100%;
-    border-bottom: none;
-    gap: 8px;
-  }
-  .nav-item {
-    width: 100%;
-  }
-  .nav-link {
-    text-align: center;
-    border: 1px solid #dee2e6 !important;
-    border-radius: 8px !important;
-  }
-  .nav-link.active {
-    background-color: #001374 !important;
-    color: white !important;
-  }
+/* Dark Mode Overrides */
+:deep(.dark-mode) .dashboard-section-card {
+  background: #15151F !important;
+  border-color: #232332 !important;
+}
+:deep(.dark-mode) .card-title {
+  color: #FFFFFF !important;
+}
+:deep(.dark-mode) .header-border {
+  border-color: #232332 !important;
+}
+:deep(.dark-mode) .text-primary-custom {
+  color: #FF750F !important;
+}
+:deep(.dark-mode) .text-main-custom {
+  color: #FFFFFF !important;
+}
+:deep(.dark-mode) .font-serif-custom {
+  color: #FFB75B !important;
+}
+:deep(.dark-mode) .solicitud-card {
+  background: #1C1C28 !important;
+  border-color: #2D2D3E !important;
+}
+:deep(.dark-mode) .card-footer-border {
+  border-color: #2D2D3E !important;
+}
+:deep(.dark-mode) .empty-box {
+  background: #1C1C28 !important;
+  border-color: #2D2D3E !important;
+  color: #A1A09A !important;
 }
 </style>

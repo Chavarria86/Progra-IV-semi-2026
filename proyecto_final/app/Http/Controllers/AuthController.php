@@ -134,29 +134,28 @@ class AuthController extends Controller
              return response()->json(['mensaje' => 'Cuenta de pasante verificada y creada con éxito. Ahora puedes iniciar sesión.']);
         } else {
             // Se trata de Personal Administrativo (Supervisor o Vicedecano)
-            // 1. Verificar si ya existe en usuarios o personal_administrativo
+            // 1. Validar que el personal exista en la base de datos institucional (personal_administrativo)
+            $personal = PersonalAdministrativo::where('correo_institucional', $correo)->first();
+            if (!$personal) {
+                return response()->json(['mensaje' => 'Este correo no pertenece al personal administrativo registrado.'], 400);
+            }
+
+            // 2. Verificar si ya tiene cuenta en la tabla 'usuarios'
             $existeUser = Usuario::where('correo_institucional', $correo)->exists();
-            $existeAdmin = PersonalAdministrativo::where('correo_institucional', $correo)->exists();
-            if ($existeUser || $existeAdmin) {
+            if ($existeUser) {
                 return response()->json(['mensaje' => 'Esta cuenta administrativa ya está registrada. Por favor inicia sesión.'], 400);
             }
 
-            // 2. Determinar rol y cargo
-            $cargo = 'supervisor';
+            // 3. Determinar rol
             $rol = 'supervisor';
-            if (str_contains($correo, 'decano') || str_contains($correo, 'vicedecano')) {
-                $cargo = 'vice_decano';
+            if (str_contains($correo, 'decano') || str_contains($correo, 'vicedecano') || strtolower($personal->cargo) === 'vice_decano') {
                 $rol = 'vice_decano';
             }
 
-            // Usar nombres provistos en el request (o valores por defecto si no vienen)
-            $nombres = $request->input('nombres', 'Personal');
-            $apellidos = $request->input('apellidos', 'Administrativo');
-
-            // 3. Crear en tabla usuarios (tabla de login unificada)
+            // 4. Crear en tabla usuarios (tabla de login unificada)
             $usuario = Usuario::create([
-                'nombres' => $nombres,
-                'apellidos' => $apellidos,
+                'nombres' => $personal->nombres,
+                'apellidos' => $personal->apellidos,
                 'correo_institucional' => $correo,
                 'password' => Hash::make($request->contrasena),
                 'estado' => 'activo',
@@ -164,13 +163,9 @@ class AuthController extends Controller
                 'fecha_registro' => now()
             ]);
 
-            // 4. Crear en tabla personal_administrativo (tabla de supervisores/decanos institucional)
-            PersonalAdministrativo::create([
-                'nombres' => $nombres,
-                'apellidos' => $apellidos,
-                'correo_institucional' => $correo,
-                'password' => Hash::make($request->contrasena),
-                'cargo' => $cargo,
+            // 5. Actualizar la contraseña en la tabla personal_administrativo para mantener sincronía
+            $personal->update([
+                'password' => Hash::make($request->contrasena)
             ]);
 
             return response()->json(['mensaje' => 'Cuenta de personal administrativo creada con éxito. Ahora puedes iniciar sesión.']);

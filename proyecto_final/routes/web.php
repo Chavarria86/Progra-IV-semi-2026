@@ -77,6 +77,8 @@ Route::prefix('api')->group(function () {
         Route::post('/vacantes', [ViceDecanoController::class, 'crearVacante']);
         Route::get('/asignaciones-data', [ViceDecanoController::class, 'getAsignacionesData']);
         Route::post('/asignar-supervisor', [ViceDecanoController::class, 'asignarSupervisor']);
+        Route::get('/postulaciones', [ViceDecanoController::class, 'getPostulaciones']);
+        Route::put('/postulaciones/{id}/evaluar', [ViceDecanoController::class, 'evaluarPostulacion']);
     });
 
     // ── Rutas de Curriculum Vitae ──────────────────────────────────────────────

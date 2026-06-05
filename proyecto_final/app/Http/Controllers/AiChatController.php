@@ -13,6 +13,8 @@ use App\Models\Pasante;
 use App\Models\PersonalAdministrativo;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Smalot\PdfParser\Parser as PdfParser;
 
 class AiChatController extends Controller
 {
@@ -174,7 +176,7 @@ class AiChatController extends Controller
         }
 
         try {
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" . $apiKey;
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=" . $apiKey;
             
             $body = [
                 'contents' => $contents,
@@ -218,16 +220,42 @@ class AiChatController extends Controller
             if ($cv) {
                 $contexto .= "[CONTEXTO ADJUNTADO: CURRÍCULUM VITAE]\n";
                 $contexto .= "Título del CV: " . ($cv->titulo_cv ?? 'No especificado') . "\n";
-                $contexto .= "Nombre Completo: " . ($cv->nombre_completo ?? 'No especificado') . "\n";
-                $contexto .= "Perfil/Sobre mí: " . ($cv->sobre_mi ?? 'No especificado') . "\n";
-                $contexto .= "Educación: " . ($cv->educacion ?? 'No especificado') . "\n";
-                $contexto .= "Objetivo Profesional: " . ($cv->objetivo ?? 'No especificado') . "\n";
-                $contexto .= "Habilidades Técnicas: " . ($cv->habilidades ?? 'No especificado') . "\n";
-                $contexto .= "Conocimientos: " . ($cv->conocimientos ?? 'No especificado') . "\n";
-                $contexto .= "Idiomas: " . ($cv->idiomas ?? 'No especificado') . "\n";
-                $contexto .= "Certificados: " . ($cv->certificados ?? 'No especificado') . "\n";
-                $contexto .= "Proyectos/Logros: " . ($cv->proyectos_sociales ?? $cv->logros ?? 'No especificado') . "\n";
-                $contexto .= "Color Plantilla/Diseño: " . ($cv->color_plantilla ?? 'Por defecto') . "\n";
+                
+                // Intentar extraer texto del archivo físico PDF real si existe
+                $textoPdf = "";
+                if ($cv->ruta_archivo) {
+                    try {
+                        if (Storage::disk('public')->exists($cv->ruta_archivo)) {
+                            $pdfPath = Storage::disk('public')->path($cv->ruta_archivo);
+                            $parser = new PdfParser();
+                            $pdf = $parser->parseFile($pdfPath);
+                            $textoPdf = $pdf->getText();
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Error al extraer texto del PDF del CV: " . $e->getMessage());
+                    }
+                }
+
+                if (!empty(trim($textoPdf))) {
+                    $contexto .= "Contenido de Texto del PDF Extraído:\n";
+                    $contexto .= "==================================================\n";
+                    $contexto .= trim($textoPdf) . "\n";
+                    $contexto .= "==================================================\n";
+                } else {
+                    $contexto .= "Nombre Completo: " . ($cv->nombre_completo ?? 'No especificado') . "\n";
+                    $contexto .= "Profesión/Cargo: " . ($cv->profesion ?? 'No especificada') . "\n";
+                    $contexto .= "Información de Contacto: Email: " . ($cv->email ?? '') . " | Teléfono: " . ($cv->telefono ?? '') . " | Dirección: " . ($cv->direccion ?? '') . "\n";
+                    $contexto .= "Perfil/Sobre mí: " . ($cv->sobre_mi ?? 'No especificado') . "\n";
+                    $contexto .= "Educación: " . ($cv->educacion ?? 'No especificado') . "\n";
+                    $contexto .= "Objetivo Profesional: " . ($cv->objetivo ?? 'No especificado') . "\n";
+                    $contexto .= "Valores: " . ($cv->valores ?? 'No especificado') . "\n";
+                    $contexto .= "Habilidades Técnicas: " . ($cv->habilidades ?? 'No especificado') . "\n";
+                    $contexto .= "Conocimientos: " . ($cv->conocimientos ?? 'No especificado') . "\n";
+                    $contexto .= "Idiomas: " . ($cv->idiomas ?? 'No especificado') . "\n";
+                    $contexto .= "Certificados: " . ($cv->certificados ?? 'No especificado') . "\n";
+                    $contexto .= "Proyectos/Logros: " . ($cv->proyectos_sociales ?? $cv->logros ?? 'No especificado') . "\n";
+                }
+                $contexto .= "Diseño / Color: " . ($cv->color_plantilla ?? 'Por defecto') . "\n";
                 $contexto .= "--------------------------------------------------\n";
             }
         }
@@ -240,10 +268,62 @@ class AiChatController extends Controller
                     : 'Estudiante';
                 $contexto .= "[CONTEXTO ADJUNTADO: INFORME MENSUAL DE HORAS]\n";
                 $contexto .= "Pasante: " . $nombrePasante . "\n";
+                $contexto .= "Nombre del Informe: " . ($informe->nombre ?? 'Sin nombre') . "\n";
                 $contexto .= "Tipo de Informe: " . strtoupper($informe->tipo ?? 'parcial') . "\n";
+                $contexto .= "Horas Reportadas: " . ($informe->horas ?? 0) . "\n";
+                $contexto .= "Período: " . ($informe->fecha_inicio ?? '') . " al " . ($informe->fecha_fin ?? '') . "\n";
                 $contexto .= "Estado del Informe: " . ($informe->estado ?? 'pendiente') . "\n";
-                $contexto .= "Fecha de Registro: " . ($informe->created_at ?? 'No especificada') . "\n";
-                $contexto .= "Observaciones/Retroalimentación: " . ($informe->observaciones ?? 'Sin observaciones aún') . "\n";
+
+                // Intentar extraer texto del archivo físico PDF real si existe y no es una ruta de generación dinámica
+                $textoPdf = "";
+                if ($informe->archivo_url && !str_contains($informe->archivo_url, '/pdf')) {
+                    try {
+                        $relativePath = str_replace('/storage/', '', $informe->archivo_url);
+                        if (Storage::disk('public')->exists($relativePath)) {
+                            $pdfPath = Storage::disk('public')->path($relativePath);
+                            $parser = new PdfParser();
+                            $pdf = $parser->parseFile($pdfPath);
+                            $textoPdf = $pdf->getText();
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Error al extraer texto del PDF del informe: " . $e->getMessage());
+                    }
+                }
+
+                if (!empty(trim($textoPdf))) {
+                    $contexto .= "Contenido de Texto del PDF Extraído:\n";
+                    $contexto .= "==================================================\n";
+                    $contexto .= trim($textoPdf) . "\n";
+                    $contexto .= "==================================================\n";
+                } else {
+                    $contexto .= "Objetivos Registrados: " . ($informe->objetivos ?? 'No especificados') . "\n";
+                    $contexto .= "Actividades Generales: " . ($informe->actividades ?? 'No especificadas') . "\n";
+                    $contexto .= "Conclusiones: " . ($informe->conclusiones ?? 'No especificadas') . "\n";
+                    
+                    // Bitácora detallada
+                    $bitacora = $informe->bitacora;
+                    if (is_string($bitacora)) {
+                        $bitacora = json_decode($bitacora, true);
+                    }
+                    if (is_array($bitacora) && count($bitacora) > 0) {
+                        $contexto .= "Bitácora de Actividades Realizadas:\n";
+                        foreach ($bitacora as $idx => $fila) {
+                            $num = $idx + 1;
+                            $fFecha = $fila['fecha'] ?? '';
+                            $fObj = $fila['objetivo'] ?? '';
+                            $fAct = $fila['actividades'] ?? '';
+                            $fLogros = $fila['logros'] ?? '';
+                            $contexto .= "  - Actividad #{$num} [Fecha: {$fFecha}]:\n";
+                            $contexto .= "    * Objetivo: {$fObj}\n";
+                            $contexto .= "    * Actividad: {$fAct}\n";
+                            $contexto .= "    * Logros/Conclusiones: {$fLogros}\n";
+                        }
+                    } else {
+                        $contexto .= "Bitácora de Actividades: Sin registros de bitácora.\n";
+                    }
+                }
+                
+                $contexto .= "Observaciones/Retroalimentación del Supervisor: " . ($informe->observaciones ?? 'Sin observaciones aún') . "\n";
                 $contexto .= "--------------------------------------------------\n";
             }
         }

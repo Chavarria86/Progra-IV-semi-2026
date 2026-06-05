@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Pasante;
 use App\Models\PersonalAdministrativo;
 use App\Models\Informe;
+use App\Models\Postulacion;
+use App\Models\CurriculumVitae;
 
 class ViceDecanoController extends Controller
 {
@@ -228,5 +230,65 @@ class ViceDecanoController extends Controller
         ]);
 
         return response()->json(['mensaje' => 'Supervisor asignado exitosamente.']);
+    }
+
+    // Obtener todas las postulaciones del sistema
+    public function getPostulaciones(Request $request)
+    {
+        $postulaciones = Postulacion::with(['pasante.usuario', 'vacante', 'pasante.supervisor', 'cv'])
+            ->orderByDesc('id')
+            ->get()
+            ->map(function ($post) {
+                $supervisorNombre = 'No asignado';
+                if ($post->pasante && $post->pasante->supervisor) {
+                    $supervisorNombre = $post->pasante->supervisor->nombres . ' ' . $post->pasante->supervisor->apellidos;
+                }
+
+                return (object)[
+                    'id' => $post->id,
+                    'pasante_id' => $post->pasante_id,
+                    'pasante_nombre' => ($post->pasante && $post->pasante->usuario) 
+                        ? ($post->pasante->usuario->nombres . ' ' . $post->pasante->usuario->apellidos) 
+                        : 'Estudiante',
+                    'empresa' => $post->vacante->empresa ?? 'Empresa',
+                    'area' => $post->vacante->area ?? '',
+                    'vacante_id' => $post->vacante_id,
+                    'estado' => $post->estado, // 'pendiente', 'sugerida', 'aprobado_por_supervisor', 'aceptada', 'rechazada'
+                    'cv_url' => $post->cv ? $post->cv->url_publica : null,
+                    'cv_titulo' => $post->cv ? ($post->cv->titulo_cv ?? 'CV') : 'CV',
+                    'supervisor' => $supervisorNombre,
+                    'fecha' => $post->created_at ? \Carbon\Carbon::parse($post->created_at)->format('d M Y') : 'Hace poco'
+                ];
+            });
+
+        return response()->json(['postulaciones' => $postulaciones]);
+    }
+
+    // Evaluar postulación por el vicedecano (aceptar / rechazar)
+    public function evaluarPostulacion(Request $request, $id)
+    {
+        $request->validate([
+            'veredicto' => 'required|in:aceptar,rechazar'
+        ]);
+
+        $postulacion = Postulacion::find($id);
+        if (!$postulacion) {
+            return response()->json(['mensaje' => 'Postulación no encontrada.'], 404);
+        }
+
+        if ($request->veredicto === 'aceptar') {
+            $postulacion->update(['estado' => 'aceptada']);
+
+            // Si es aprobada, el pasante avanza a Fase 3 (F3)
+            $pasante = Pasante::find($postulacion->pasante_id);
+            if ($pasante) {
+                $pasante->update(['fase_actual' => 'F3']);
+            }
+
+            return response()->json(['mensaje' => 'Postulación aprobada con éxito. El pasante avanza a Fase 3.']);
+        } else {
+            $postulacion->update(['estado' => 'rechazada']);
+            return response()->json(['mensaje' => 'Postulación rechazada.']);
+        }
     }
 }

@@ -34,4 +34,12 @@ class Postulacion extends Model
     {
         return $this->belongsTo(Vacante::class, 'vacante_id', 'id');
     }
+
+    /**
+     * Una postulación puede pertenecer a un CV.
+     */
+    public function cv(): BelongsTo
+    {
+        return $this->belongsTo(CurriculumVitae::class, 'cv_id', 'id');
+    }
 }

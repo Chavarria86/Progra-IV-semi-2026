@@ -22,6 +22,7 @@
     <!-- Módulos de Vice Decano -->
     <ViceDecanoCrearVacantes v-else-if="seccionActiva === 'crear_vacantes'" />
     <ViceDecanoAsignarSupervisores v-else-if="seccionActiva === 'asignar_supervisores'" />
+    <ViceDecanoPostulaciones v-else-if="seccionActiva === 'postulaciones'" :isDark="isDark" />
 
     <!-- Modo Supervisor Global (Incrustado con Navegación por Pestañas) -->
     <div v-else-if="seccionActiva === 'vista_supervisores'" class="modo-supervisor-wrapper animate-fade-in">
@@ -102,6 +103,7 @@ import ViceDecanoOverview from './ViceDecanoOverview.vue';
 import ViceDecanoEvaluarInforme from './ViceDecanoEvaluarInforme.vue';
 import ViceDecanoCrearVacantes from './ViceDecanoCrearVacantes.vue';
 import ViceDecanoAsignarSupervisores from './ViceDecanoAsignarSupervisores.vue';
+import ViceDecanoPostulaciones from './ViceDecanoPostulaciones.vue';
 
 // Dashboard completo del supervisor
 import SupervisorDashboard from './SupervisorDashboard.vue';

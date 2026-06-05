@@ -26,6 +26,11 @@
       :usuario="usuario"
     />
 
+    <SupervisorSolicitudes
+      v-else-if="seccionActiva === 'solicitudes'"
+      :usuario="usuario"
+    />
+
 
     <!-- ── Mis Pasantes ── -->
     <div v-else-if="seccionActiva === 'mis_pasantes'" class="mis-pasantes-view animate-fade-in">
@@ -134,6 +139,7 @@ import SupervisorValidarCv from './SupervisorValidarCv.vue';
 import SupervisorAsignarVacante from './SupervisorAsignarVacante.vue';
 import SupervisorEvaluarInformes from './SupervisorEvaluarInformes.vue';
 import SupervisorSugerirVacante from './SupervisorSugerirVacante.vue';
+import SupervisorSolicitudes from './SupervisorSolicitudes.vue';
 
 const props = defineProps({ seccionActiva: String });
 

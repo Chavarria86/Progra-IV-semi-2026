@@ -28,7 +28,7 @@ class CodigoRecuperacionMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '🔐 Código de Verificación - Génesis Profesional',
+            subject: ' Código de Verificación - Génesis Profesional',
         );
     }
 
